@@ -1,4 +1,4 @@
-import { Worker, isMainThread, workerData } from 'worker_threads'; //use worker threads for parallel event listening
+import { Worker, isMainThread, workerData } from 'worker_threads'; //!use worker threads for parallel event listening
 import { ETHConfig } from './services/config';
 import ETHService from './services/eth';
 import CoreService from './services/core';
@@ -22,7 +22,7 @@ async function main() {
     } else {
         const pid: number = workerData.pid;
         await coreService.eventCheckerLoop(pid); //start core service listener and handler
-        //TODO send info to mainThread?
+        //TODO? send info to mainThread
     }
 }
 

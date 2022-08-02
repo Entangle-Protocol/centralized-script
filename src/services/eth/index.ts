@@ -65,6 +65,11 @@ export default class ETHService {
                                 blockTo
                             }
                         });
+                        console.log(
+                            `${eventObj.contractName}-${contractsArray.indexOf(
+                                contract
+                            )}: Found events ${event} - ${events.length}`
+                        );
                         contractArrayEvents.push(events);
                     } catch (error) {
                         throw new Error(`Can't get events for contract ${eventObj.contractName}`);
@@ -80,6 +85,9 @@ export default class ETHService {
                             blockTo
                         }
                     });
+                    console.log(
+                        `${eventObj.contractName}: Found events ${event} - ${events.length}`
+                    );
                     allContractsEvents[eventObj.contractName] = events;
                 } catch (error) {
                     throw new Error(`Can't get events for contract ${eventObj.contractName}`);

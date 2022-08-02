@@ -3,7 +3,7 @@ import ETHService from '../eth';
 export default class CoreService {
     constructor(private ethService: ETHService) {}
 
-    //TODO check if it woks!
+    //TODO! check if it woks!
     async await(delay: number) {
         await new Promise((resolve) =>
             setTimeout(() => {
@@ -43,7 +43,7 @@ export default class CoreService {
                     this.await(timeEnd - timeStart); //lets wait until new blocks
                 }
             } catch (error) {
-                //TODO error handler (continue or ?);
+                //TODO? error handler (continue or ?);
             }
         }
     }
