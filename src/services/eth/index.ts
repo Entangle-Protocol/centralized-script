@@ -58,24 +58,32 @@ export default class ETHService {
             if (Array.isArray(contractsArray)) {
                 const contractArrayEvents = [];
                 for (const contract of contractsArray) {
+                    try {
+                        const events = await contract.getPastEvents(event, {
+                            filter: {
+                                blockFrom,
+                                blockTo
+                            }
+                        });
+                        contractArrayEvents.push(events);
+                    } catch (error) {
+                        throw new Error(`Can't get events for contract ${eventObj.contractName}`);
+                    }
+                }
+                allContractsEvents[eventObj.contractName] = contractArrayEvents;
+            } else if (contractsArray) {
+                const contract = contractsArray;
+                try {
                     const events = await contract.getPastEvents(event, {
                         filter: {
                             blockFrom,
                             blockTo
                         }
                     });
-                    contractArrayEvents.push(events);
+                    allContractsEvents[eventObj.contractName] = events;
+                } catch (error) {
+                    throw new Error(`Can't get events for contract ${eventObj.contractName}`);
                 }
-                allContractsEvents[eventObj.contractName] = contractArrayEvents;
-            } else if (contractsArray) {
-                const contract = contractsArray;
-                const events = await contract.getPastEvents(event, {
-                    filter: {
-                        blockFrom,
-                        blockTo
-                    }
-                });
-                allContractsEvents[eventObj.contractName] = events;
             }
         }
         return allContractsEvents;

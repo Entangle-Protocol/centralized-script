@@ -26,20 +26,24 @@ export default class CoreService {
         const blockDelay = this.ethService.getDelayTime(selectedFarmObj?.chainId) || 6000;
 
         while (true) {
-            //TODO update blockFrom, blockTo;
+            try {
+                //TODO update blockFrom, blockTo;
 
-            const timeStart = Date.now();
-            const events = await this.ethService.getAllContractsEvents(
-                selectedFarmObj,
-                blockFrom,
-                blockTo
-            );
+                const timeStart = Date.now();
+                const events = await this.ethService.getAllContractsEvents(
+                    selectedFarmObj,
+                    blockFrom,
+                    blockTo
+                );
 
-            //TODO handle events
+                //TODO handle events
 
-            const timeEnd = Date.now();
-            if (timeEnd - timeStart < blockDelay) {
-                this.await(timeEnd - timeStart); //lets wait until new blocks
+                const timeEnd = Date.now();
+                if (timeEnd - timeStart < blockDelay) {
+                    this.await(timeEnd - timeStart); //lets wait until new blocks
+                }
+            } catch (error) {
+                //TODO error handler (continue or ?);
             }
         }
     }
