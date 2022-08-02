@@ -3142,11 +3142,6 @@ onetime@^6.0.0:
   dependencies:
     mimic-fn "^4.0.0"
 
-option.ts@^0.3.0:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/option.ts/-/option.ts-0.3.0.tgz#21bf1733be89a08817b5a0858e9f86924c2fa694"
-  integrity sha512-EOlapoMLIfAaoyRXYrQ5zJFSE2b0Brqea7ld+WIHCvj5y0iABbCVnLCjgmn+b2EKUgPa2BxMqBgo8sDPZ2B0VQ==
-
 optionator@^0.8.3:
   version "0.8.3"
   resolved "https://registry.npmjs.org/optionator/-/optionator-0.8.3.tgz"

@@ -1,8 +1,8 @@
 import { AbiItem } from 'web3-utils';
-import type { Option } from 'option.ts';
 
 export type SupportedChainIds = 250 | 1 | 56 | 43114;
 export type ChainType = 'evm' | 'elrond';
+export type ContractNames = 'chef' | 'factories' | 'dexes' | 'router' | 'loan' | 'pool';
 
 export type Config = {
     farms: Farm[];
@@ -12,27 +12,22 @@ export type Config = {
 };
 
 export type ChainContracts = {
-    chef: ContractInfo;
-    factory: Option<ContractInfo>;
-    dexes: ContractInfo[];
-    router: Option<ContractInfo>;
-    loan: Option<ContractInfo>;
-    pool: Option<ContractInfo>;
+    [key in ContractNames]: ContractInfo | ContractInfo[];
 };
 
 export type Farm = {
     pid: number;
     chainId: SupportedChainIds;
-    contracts: ChainContracts;
+    contracts: Partial<ChainContracts>;
 };
 
 export type Network = {
     url: string;
-    chainId: SupportedChainIds;
-    type: ChainType;
+    blockTime: number;
 };
 
 export type ContractInfo = {
     address: string;
     abi: AbiItem;
+    chainId: SupportedChainIds;
 };
