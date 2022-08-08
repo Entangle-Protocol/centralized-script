@@ -1,8 +1,9 @@
+import { runInThisContext } from 'vm';
 import ETHService from '../eth';
 
 export default class CoreService {
     constructor(private ethService: ETHService) {}
-
+    // help ||
     //TODO! check if it woks!
     async await(delay: number) {
         await new Promise((resolve) =>
@@ -37,6 +38,64 @@ export default class CoreService {
                 );
 
                 //TODO handle events
+
+                if (events.router) {
+                    events.router.forEach((el: any) => {
+                        if (Array.isArray(el)) {
+                            if (el[el.length - 1].event == 'DEXRebalancing') {
+                                switch (el[el.length - 1].returnValues.id) {
+                                    case 1:
+                                        this.ethService.eventAHandler(
+                                            el[el.length - 1].returnValues.pid,
+                                            el[el.length - 1].returnValues.kof,
+                                            el[el.length - 1].returnValues.id
+                                        );
+                                        break;
+                                    case 2:
+                                        this.ethService.eventAHandler(
+                                            el[el.length - 1].returnValues.pid,
+                                            el[el.length - 1].returnValues.kof,
+                                            el[el.length - 1].returnValues.id
+                                        );
+                                        break;
+                                    case 3:
+                                        break;
+                                    case 4:
+                                        break;
+                                }
+                            } else if (el[el.length - 1].event == 'Deposit') {
+                                this.ethService.depositEventHandler();
+                            } else if (el[el.length - 1].event == 'Withdraw') {
+                                this.ethService.withdrawBridgeEventHandler();
+
+                            } else if (el[el.length - 1].event == 'Bridge') {
+                                this.ethService.bridgeEventHandler();
+                            }
+                        } else {
+                            if (el.event == 'DEXRebalancing') {
+                                const { pid, kof, id } = el.returnValues;
+                                switch (id) {
+                                    case 1:
+                                        this.ethService.eventAHandler(pid, kof, id);
+                                        break;
+                                    case 2:
+                                        this.ethService.eventAHandler(pid, kof, id);
+                                        break;
+                                    case 3:
+                                        break;
+                                    case 4:
+                                        break;
+                                }
+                            } else if (el.event == 'Deposit') {
+                                this.ethService.depositEventHandler();
+                            } else if (el.event == 'Withdraw') {
+                                this.ethService.withdrawBridgeEventHandler();
+                            } else if (el.event == 'Bridge') {
+                                this.ethService.bridgeEventHandler();
+                            }
+                        }
+                    });
+                }
 
                 const timeEnd = Date.now();
                 if (timeEnd - timeStart < blockDelay) {

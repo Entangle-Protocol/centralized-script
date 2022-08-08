@@ -164,7 +164,7 @@ export default class ETHService {
         return compiledFarmsContracts;
     }
 
-    private async eventAHandler() {
+    async eventAHandler(pid: number, kof: number, id: number) {
         /**
          * fires by router, either a lot of synth, or a lot of usdc
          * 1. get Event Data
@@ -172,7 +172,7 @@ export default class ETHService {
          */
     }
 
-    private async bridgeEventHandler() {
+    async bridgeEventHandler() {
         /**
          * fires by pool after successful bridging
          * 1. get Event Data
@@ -180,7 +180,7 @@ export default class ETHService {
          */
     }
 
-    private async depositEventHandler() {
+    async depositEventHandler() {
         /**
          * fires by router after succesful deposit via SynthChef
          * 1. get Event Data
@@ -188,7 +188,7 @@ export default class ETHService {
          */
     }
 
-    private async burnEventHandler() {
+    async burnEventHandler() {
         /**
          * fires by router after succesful burn via SynthFactory
          * 1. get Event Data
@@ -196,11 +196,15 @@ export default class ETHService {
          */
     }
 
-    private async withdrawBridgeEventHandler() {
+    async withdrawBridgeEventHandler() {
         /**
          * fires by router after succesful deposit via SynthChef
          * 1. get Event Data
          * 2. call SynthFactory mint method
          */
+    }
+
+    async eventBHandler() {
+        
     }
 }
