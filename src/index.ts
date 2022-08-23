@@ -1,6 +1,6 @@
 import { Worker, isMainThread, workerData } from 'worker_threads'; //!use worker threads for parallel event listening
 import { ETHConfig } from './services/config';
-import ETHService from './services/eth';
+import ETHService from './services/chain/connectors/eth';
 import CoreService from './services/core';
 
 const ethService = new ETHService(ETHConfig);

@@ -1,5 +1,5 @@
 import Web3 from 'web3';
-import { ContractInfo, SupportedChainIds } from '../config/interface';
+import { ContractInfo, SupportedChainIds } from '../../../config/interface';
 import {
     Config,
     Farm,
@@ -204,7 +204,5 @@ export default class ETHService {
          */
     }
 
-    async eventBHandler() {
-        
-    }
+    async eventBHandler() {}
 }

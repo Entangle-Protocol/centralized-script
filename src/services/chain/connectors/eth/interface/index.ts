@@ -1,6 +1,12 @@
-import { ChainContracts } from '../../config/interface';
+import { ChainContracts } from '../../../../config/interface';
 import { Contract, EventData } from 'web3-eth-contract';
-import { Config, Network, SupportedChainIds, Farm, ContractNames } from '../../config/interface';
+import {
+    Config,
+    Network,
+    SupportedChainIds,
+    Farm,
+    ContractNames
+} from '../../../../config/interface';
 
 export type ContractsKeys = keyof ChainContracts;
 
