@@ -1,10 +1,9 @@
+import 'module-alias/register';
 import { Worker, isMainThread, workerData } from 'worker_threads'; //!use worker threads for parallel event listening
-import { ETHConfig } from './services/config';
-import ETHService from './services/chain/connectors/eth';
-import CoreService from './services/core';
-
-const ethService = new ETHService(ETHConfig);
-const coreService = new CoreService(ethService);
+import { ETHConfig } from '@config/index';
+import { EthereumConnector } from '@chain/connectors';
+import Core from '@chain/core';
+import ChainServce from '@chain/index';
 
 async function main() {
     const watchedFarms = [8, 67, 7, 26];
@@ -21,7 +20,11 @@ async function main() {
         });
     } else {
         const pid: number = workerData.pid;
-        await coreService.eventCheckerLoop(pid); //start core service listener and handler
+        const connector = new EthereumConnector(ETHConfig);
+        const core = new Core(connector, ETHConfig, pid);
+        const service = new ChainServce(core);
+
+        service.startEventLoop();
         //TODO? send info to mainThread
     }
 }
