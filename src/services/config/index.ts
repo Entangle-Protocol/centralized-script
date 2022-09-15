@@ -1,4 +1,4 @@
-import { Config } from './interface';
+import { Config } from './interfaces';
 
 export const ETHConfig: Config = {
     /**
@@ -39,6 +39,10 @@ export const ETHConfig: Config = {
                     address: '',
                     events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         },
         {
@@ -63,6 +67,10 @@ export const ETHConfig: Config = {
                     address: '',
                     events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         },
         {
@@ -87,6 +95,10 @@ export const ETHConfig: Config = {
                     address: '',
                     events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         },
         {
@@ -111,6 +123,10 @@ export const ETHConfig: Config = {
                     address: '',
                     events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         }
     ],

@@ -5,7 +5,13 @@ import { EthereumConnector } from '@chain/connectors';
 import Core from '@chain/core';
 import ChainServce from '@chain/index';
 
+import RebalancerService from '@rebalancer/index';
+import { SequelizeAgent } from '@libs/sequelize';
+
 async function main() {
+    SequelizeAgent.getInstance();
+    await SequelizeAgent.connect();
+
     const watchedFarms = [8, 67, 7, 26];
 
     if (isMainThread) {
@@ -16,13 +22,14 @@ async function main() {
                 }
             });
 
-            worker.on('message', (msg) => {}); //TODO handle workers response
+            worker.on('message', () => {}); //TODO handle workers response
         });
     } else {
         const pid: number = workerData.pid;
         const connector = new EthereumConnector(ETHConfig);
         const core = new Core(connector, ETHConfig, pid);
-        const service = new ChainServce(core);
+        const rebalancer = new RebalancerService();
+        const service = new ChainServce(core, rebalancer);
 
         service.startEventLoop();
         //TODO? send info to mainThread
