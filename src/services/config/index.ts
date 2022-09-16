@@ -1,6 +1,4 @@
-import { Config } from './interface';
-import { AbiItem } from 'web3-utils';
-import * as abis from './ABI';
+import { Config } from './interfaces';
 
 export const ETHConfig: Config = {
     /**
@@ -25,26 +23,26 @@ export const ETHConfig: Config = {
             contracts: {
                 chef: {
                     address: '',
-                    abi: abis.eth_synthChef as unknown as AbiItem, //example of ABI import
-                    chainId: 43114
+                    events: []
                 },
                 router: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 43114
+                    events: []
                 },
                 factories: [],
                 dexes: [],
                 loan: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 43114
+                    events: []
                 },
                 pool: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 43114
+                    events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         },
         {
@@ -53,26 +51,26 @@ export const ETHConfig: Config = {
             contracts: {
                 chef: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 router: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 factories: [],
                 dexes: [],
                 loan: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 pool: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         },
         {
@@ -81,26 +79,26 @@ export const ETHConfig: Config = {
             contracts: {
                 chef: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 router: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 factories: [],
                 dexes: [],
                 loan: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 pool: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         },
         {
@@ -109,41 +107,45 @@ export const ETHConfig: Config = {
             contracts: {
                 chef: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 router: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 factories: [],
                 dexes: [],
                 loan: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 },
                 pool: {
                     address: '',
-                    abi: '' as unknown as AbiItem,
-                    chainId: 1
+                    events: []
                 }
+            },
+            opToken: {
+                address: '',
+                decimals: 18
             }
         }
     ],
     networks: {
         56: {
-            url: ''
+            url: '',
+            blockTime: 0
         },
         250: {
-            url: ''
+            url: '',
+            blockTime: 0
         },
         43114: {
-            url: ''
+            url: '',
+            blockTime: 0
         },
         1: {
-            url: ''
+            url: '',
+            blockTime: 0
         }
     }
 };

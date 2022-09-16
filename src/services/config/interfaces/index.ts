@@ -1,5 +1,3 @@
-import { AbiItem } from 'web3-utils';
-
 export type SupportedChainIds = 250 | 1 | 56 | 43114;
 export type ChainType = 'evm' | 'elrond';
 export type ContractNames = 'chef' | 'factories' | 'dexes' | 'router' | 'loan' | 'pool';
@@ -7,7 +5,7 @@ export type ContractNames = 'chef' | 'factories' | 'dexes' | 'router' | 'loan' |
 export type Config = {
     farms: Farm[];
     networks: {
-        [key in SupportedChainIds]?: Network;
+        [key in SupportedChainIds]: Network;
     };
 };
 
@@ -19,6 +17,7 @@ export type Farm = {
     pid: number;
     chainId: SupportedChainIds;
     contracts: Partial<ChainContracts>;
+    opToken: TokenInfo;
 };
 
 export type Network = {
@@ -28,6 +27,18 @@ export type Network = {
 
 export type ContractInfo = {
     address: string;
-    abi: AbiItem;
-    chainId: SupportedChainIds;
+    events: EventInfo[];
+    chainId?: SupportedChainIds;
+};
+
+export type TokenInfo = {
+    address: string;
+    decimals: number;
+};
+
+export type EventInfo = {
+    signature: string;
+    parameters: {
+        [key: string]: string; //from: address; amount: uint256
+    }[];
 };
