@@ -114,9 +114,7 @@ POOL:
 
 ### Router
 - EventA - Event fires when IDEX is needed rebalancing scenario A.
-- EventB - Event fires when IDEX is needed rebalancing scenario B or C.
-- EventC - Event fires when IDEX is needed rebalancing scenario C.
-It might change because sc couldn't understand the difference between eventB and eventC
+- EventBC - Event fires when IDEX is needed rebalancing scenario B or C.
 ```js
 IEventA {
     type: string | bytes32[] //type of event: Buy || Sell
