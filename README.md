@@ -136,7 +136,6 @@ IEventBC {
 IDeposit {
     amount: number | uint256; //amount of USDC 
     opId: number | uint256; //unique Operation id;
-    type: string | bytes32; //type of deposit
 }
 ```
 ### SynthChef
