@@ -1,4 +1,5 @@
 import { ContractNames } from '@config/interfaces';
+import { Operation } from '@models/Operation';
 import { IRebalancer } from '@rebalancer/interfaces';
 import {
     ICore,
@@ -9,7 +10,14 @@ import {
     RebalancingEventType,
     EventABuyHandler,
     EventAEvent,
-    DepositEvent
+    DepositEvent,
+    DepositEventType,
+    DepositToChefHandler,
+    MintDepositEvent,
+    MintDepositHandler,
+    EventASellFreezeHandler,
+    EventASellWithdrawHandler,
+    BurnWithdrawEvent
 } from './interfaces';
 
 export default class ChainService implements IChainService {
@@ -59,27 +67,22 @@ export default class ChainService implements IChainService {
                     }
                     break;
                 }
-                case 'dexes': {
-                    const events: EventLog[][] = e[contract] as EventLog[][];
+                case 'dex': {
+                    const events: EventLog[] = e[contract] as EventLog[];
                     if (events) {
-                        for (const instance of events) {
-                            for (const event of instance) {
-                                await this.dexHandler(event);
-                            }
+                        for (const event of events) {
+                            await this.dexHandler(event);
                         }
                     }
                     break;
                 }
-                case 'factories': {
-                    const events: EventLog[][] = e[contract] as EventLog[][];
+                case 'factory': {
+                    const events: EventLog[] = e[contract] as EventLog[];
                     if (events) {
-                        for (const instance of events) {
-                            for (const event of instance) {
-                                await this.factoryHandler(event);
-                            }
+                        for (const event of events) {
+                            await this.factoryHandler(event);
                         }
                     }
-                    break;
                 }
                 case 'loan': {
                     const events: EventLog[] = e[contract] as EventLog[];
@@ -120,13 +123,107 @@ export default class ChainService implements IChainService {
         );
     }
 
-    private async chefHandler(e: EventLog) {}
+    private async chefHandler(e: EventLog) {
+        const { eventSignature } = e;
 
-    private async dexHandler(e: EventLog) {}
+        switch (eventSignature) {
+            case 'Deposit': {
+                const { parameters } = e as EventLog<MintDepositEvent>;
+                const { opId, amount } = parameters;
 
-    private async factoryHandler(e: EventLog) {}
+                try {
+                    let op: Operation;
+                    if (!opId) {
+                        // op = await this.rebalancer.createOp();
+                        return; //TODO!
+                    } else {
+                        op = await this.rebalancer.getOpById(opId);
+                    }
+                    const chefAddress = this.core.getContractAddress('chef', op.farmChainId);
+                    const dexAddress = this.core.getContractAddress('dex');
+                    const factoryAddress = this.core.getContractAddress(
+                        'factory',
+                        op.sourceChainId
+                    );
+                    const handler: MintDepositHandler = {
+                        method: 'mint',
+                        params: [
+                            {
+                                name: 'chainId',
+                                chainParamType: 'uint256',
+                                value: op.farmChainId
+                            },
+                            {
+                                name: 'synthChef',
+                                chainParamType: 'address',
+                                value: chefAddress
+                            },
+                            {
+                                name: 'pid',
+                                chainParamType: 'uint256',
+                                value: op.farmId
+                            },
+                            {
+                                name: 'amount',
+                                chainParamType: 'uin256',
+                                value: BigInt(0) //TODO!
+                            },
+                            {
+                                name: 'to',
+                                chainParamType: 'address',
+                                value: op.user || dexAddress
+                            }
+                        ]
+                    };
 
-    private async loanHandler(e: EventLog) {}
+                    const result = await this.core.sendTx({
+                        chainId: op.sourceChainId,
+                        address: factoryAddress,
+                        data: handler
+                    });
+
+                    await this.rebalancer.saveTxResult(result, op);
+                } catch (error) {}
+                break;
+            }
+            case 'Withdraw': {
+                const { parameters } = e as EventLog<BurnWithdrawEvent>;
+                const { opId } = parameters;
+                try {
+                    let op: Operation;
+                    if (!opId) {
+                        // op = await this.rebalancer.createOp();
+                        return; //TODO!
+                    } else {
+                        op = await this.rebalancer.getOpById(opId);
+                    }
+
+                    //send tx to Router to bridge USDC, to burn synths
+                } catch (error) {}
+            }
+        }
+    }
+
+    private async dexHandler(e: EventLog) {
+        const { eventSignature } = e;
+
+        switch (eventSignature) {
+        }
+    }
+
+    private async factoryHandler(e: EventLog) {
+        const { eventSignature } = e;
+
+        switch (eventSignature) {
+        }
+    }
+
+    private async loanHandler(e: EventLog) {
+        const { eventSignature } = e;
+
+        switch (eventSignature) {
+        }
+    }
 
     private async poolHandler(e: EventLog) {
         const { eventSignature } = e;
@@ -134,8 +231,69 @@ export default class ChainService implements IChainService {
         switch (eventSignature) {
             case 'Deposit': {
                 const { parameters } = e as EventLog<DepositEvent>;
-                const { opId, amount, type } = parameters;
-                break;
+                const { opId, amount } = parameters;
+                try {
+                    const op = await this.rebalancer.getOpById(opId);
+                    const type = this.getDepositEventType(op.event, op.type);
+                    const opToken = this.core.getOpToken();
+                    switch (type) {
+                        case DepositEventType.DepositToChef: {
+                            const routerAddress = this.core.getContractAddress('router');
+
+                            const handler: DepositToChefHandler = {
+                                method: 'deposit',
+                                params: [
+                                    {
+                                        name: 'pid',
+                                        chainParamType: 'uint256',
+                                        value: op.farmId
+                                    },
+                                    {
+                                        name: 'tokenFrom',
+                                        chainParamType: 'uint256',
+                                        value: opToken.address
+                                    },
+                                    {
+                                        name: 'amount',
+                                        chainParamType: 'uint256',
+                                        value: amount
+                                    },
+                                    {
+                                        name: 'data',
+                                        chainParamType: 'bytes',
+                                        value: [
+                                            {
+                                                name: 'opId',
+                                                chainParamType: 'uint256',
+                                                value: op.id
+                                            }
+                                        ]
+                                    }
+                                ]
+                            };
+
+                            const result = await this.core.sendTx({
+                                chainId: op.farmChainId,
+                                address: routerAddress,
+                                data: handler
+                            });
+
+                            await this.rebalancer.saveTxResult(result, op);
+                            break;
+                        }
+                        case DepositEventType.DepositToDEX: {
+                            // return DepositEventType.DepositToDEX;
+                        }
+                        case DepositEventType.DepositToWallet: {
+                            // return DepositEventType.DepositToWallet;
+                        }
+                        default: {
+                            throw new Error(`Wrong event type`);
+                        }
+                    }
+                } catch (error) {
+                    console.log(error);
+                }
             }
         }
     }
@@ -144,23 +302,33 @@ export default class ChainService implements IChainService {
         const { eventSignature } = e;
         switch (eventSignature) {
             case 'EventA': {
+                // geting parameters from event
                 const { parameters } = e as EventLog<EventAEvent>;
                 const { type: _type, pid, amount } = parameters;
+
+                // getting Operation info
                 const type = this.getRebalancingEventType(_type);
-                switch (type) {
-                    case RebalancingEventType.Buy: {
-                        const event = RebalancingEvent.A;
-                        const sourceChainId = this.core.getChainId();
-                        const farmChainId = this.core.getFarmChainId(pid);
-                        const routerAddress = this.core.getContractAddress('router');
-                        const opToken = this.core.getOpToken();
-                        try {
-                            const op = await this.rebalancer.createOp(
-                                type,
-                                event,
-                                sourceChainId,
-                                farmChainId
-                            );
+                const sourceChainId = this.core.getChainId();
+                const farmChainId = this.core.getFarmChainId(pid);
+                const farmId = this.core.getFarmId(pid);
+                const event = RebalancingEvent.A;
+
+                try {
+                    //creating Operation instanse
+                    const op = await this.rebalancer.createOp(
+                        type,
+                        event,
+                        sourceChainId,
+                        farmChainId,
+                        farmId
+                    );
+
+                    switch (type) {
+                        case RebalancingEventType.Buy: {
+                            //getting necessary parameters for request
+                            const routerAddress = this.core.getContractAddress('router');
+                            const opToken = this.core.getOpToken();
+                            //creating data object for tx
                             const handler: EventABuyHandler = {
                                 method: 'bridgeToChain',
                                 params: [
@@ -198,36 +366,97 @@ export default class ChainService implements IChainService {
                                     }
                                 ]
                             };
-
+                            //sending tx
                             const result = await this.core.sendTx({
                                 chainId: op.farmChainId,
                                 address: routerAddress,
                                 data: handler
                             });
 
-                            if (result.status) {
-                                op.status = `Router send request for bridging`;
-                                op.gasSpent += result.gas as number;
-                                op.hashes.push(result.hash as string);
-                                op.currentStep++;
-                                await op.save();
-                            } else {
-                                await this.rebalancer.createErrorOp(
-                                    result.error ? result.error : 'Something went wrong',
-                                    op.id
-                                );
-                            }
-                        } catch (error) {
-                            console.log(error);
-                        }
+                            await this.rebalancer.saveTxResult(result, op);
 
-                        break;
+                            break;
+                        }
+                        case RebalancingEventType.Sell: {
+                            // const factoryAddress = this.core.getContractAddress('factory');
+                            const routerAddress = this.core.getContractAddress(
+                                'chef',
+                                op.farmChainId
+                            );
+
+                            const opToken = this.core.getOpToken(op.farmChainId);
+
+                            // const freezeHandler: EventASellFreezeHandler = {
+                            //     method: 'freeze',
+                            //     params: [
+                            //         {
+                            //             name: 'opId',
+                            //             chainParamType: 'uint256',
+                            //             value: op.id
+                            //         },
+                            //         {
+                            //             name: 'amount',
+                            //             chainParamType: 'uint256',
+                            //             value: amount
+                            //         }
+                            //     ]
+                            // };
+
+                            const withdrawHandler: EventASellWithdrawHandler = {
+                                method: 'withdraw',
+                                params: [
+                                    {
+                                        name: 'pid',
+                                        chainParamType: 'uint256',
+                                        value: op.farmId
+                                    },
+                                    {
+                                        name: 'tokenTo',
+                                        chainParamType: 'uint256',
+                                        value: opToken.address
+                                    },
+                                    {
+                                        name: 'amount',
+                                        chainParamType: 'uint256',
+                                        value: amount
+                                    },
+                                    {
+                                        name: 'data',
+                                        chainParamType: 'bytes',
+                                        value: [
+                                            {
+                                                name: 'opId',
+                                                chainParamType: 'uint256',
+                                                value: op.id
+                                            }
+                                        ]
+                                    }
+                                ]
+                            };
+
+                            // const freezeResult = await this.core.sendTx({
+                            //     chainId: op.sourceChainId,
+                            //     address: factoryAddress,
+                            //     data: freezeHandler
+                            // });
+
+                            // await this.rebalancer.saveTxResult(freezeResult, op);
+
+                            // if (freezeResult.status) {
+                            const withdrawResult = await this.core.sendTx({
+                                chainId: op.farmChainId,
+                                address: routerAddress,
+                                data: withdrawHandler
+                            });
+
+                            await this.rebalancer.saveTxResult(withdrawResult, op);
+                            // }
+                            break;
+                        }
                     }
-                    case RebalancingEventType.Sell: {
-                        break;
-                    }
+                } catch (error) {
+                    console.log(error);
                 }
-                break;
             }
         }
     }
@@ -239,6 +468,24 @@ export default class ChainService implements IChainService {
             }
             case RebalancingEventType.Sell: {
                 return RebalancingEventType.Sell;
+            }
+            default: {
+                throw new Error(`Wrong event type`);
+            }
+        }
+    }
+
+    //TODO do not hardcode
+    private getDepositEventType(rebalancingType: string, eventType: string): DepositEventType {
+        switch (true) {
+            case ['A, C'].includes(rebalancingType) && eventType == 'Buy': {
+                return DepositEventType.DepositToChef;
+            }
+            case ['A'].includes(rebalancingType) && eventType == 'Sell': {
+                return DepositEventType.DepositToDEX;
+            }
+            case ['C'].includes(rebalancingType) && eventType == 'Sell': {
+                return DepositEventType.DepositToWallet;
             }
             default: {
                 throw new Error(`Wrong event type`);

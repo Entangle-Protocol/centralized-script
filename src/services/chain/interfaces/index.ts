@@ -6,6 +6,7 @@ export interface IChainService {
 }
 export interface ICore {
     getFarmChainId(pid: SupportedChainIds): SupportedChainIds;
+    getFarmId(pid: SupportedChainIds): number;
     getEvents(o: getEventsOptions): Promise<Partial<GetEventsReturn>>;
     getBlock(): Promise<number>;
     getBlockDelay(): number;

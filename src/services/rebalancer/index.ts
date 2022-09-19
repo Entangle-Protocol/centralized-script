@@ -12,6 +12,7 @@ export default class RebalancerService implements IRebalancer {
         event: RebalancingEvent,
         sourceChainId: SupportedChainIds,
         farmChainId: SupportedChainIds,
+        farmId: number,
         user?: string
     ): Promise<Operation> {
         const op = await this.repo.createOp({
@@ -20,6 +21,7 @@ export default class RebalancerService implements IRebalancer {
             user,
             sourceChainId,
             farmChainId,
+            farmId,
             status: `Starting event A ${type} rebalancing`
         });
         return op;

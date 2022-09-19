@@ -14,6 +14,7 @@ type OperationOptions = {
     event: RebalancingEvent;
     sourceChainId: SupportedChainIds;
     farmChainId: SupportedChainIds;
+    farmId: number;
     user?: string;
     status?: string;
 };
@@ -22,11 +23,12 @@ type OperationAttributes = InferAttributes<Operation>;
 
 class Operation extends Model<InferAttributes<Operation>, InferCreationAttributes<Operation>> {
     declare id: CreationOptional<number>;
-    declare event: string;
-    declare type: string;
+    declare event: string; //A,B,C
+    declare type: string; //Buy,Sell
     declare user: CreationOptional<string>;
     declare sourceChainId: SupportedChainIds;
     declare farmChainId: SupportedChainIds;
+    declare farmId: number;
     declare status: string | null;
     declare currentStep: CreationOptional<number>;
     declare gasSpent: CreationOptional<number>;
@@ -43,6 +45,7 @@ Operation.init(
             primaryKey: true,
             autoIncrement: true
         },
+        farmId: DataTypes.INTEGER,
         type: DataTypes.CHAR(4),
         event: DataTypes.CHAR(1),
         user: DataTypes.CHAR(42),
