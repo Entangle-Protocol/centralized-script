@@ -1,6 +1,6 @@
 export type SupportedChainIds = 250 | 1 | 56 | 43114;
 export type ChainType = 'evm' | 'elrond';
-export type ContractNames = 'chef' | 'factories' | 'dexes' | 'router' | 'loan' | 'pool';
+export type ContractNames = 'chef' | 'factory' | 'dex' | 'router' | 'loan' | 'pool';
 
 export type Config = {
     farms: Farm[];
@@ -10,7 +10,7 @@ export type Config = {
 };
 
 export type ChainContracts = {
-    [key in ContractNames]: ContractInfo | ContractInfo[];
+    [key in ContractNames]: ContractInfo;
 };
 
 export type Farm = {
