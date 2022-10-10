@@ -1,4 +1,4 @@
-import { RebalancingEvent, RebalancingEventType } from '@chain/interfaces';
+import { RebalancingEvent, RebalancingEventType, SendTxReturn } from '@chain/interfaces';
 import { SupportedChainIds } from '@config/interfaces';
 import { ErrorOperation } from '@models/ErrorOpertaion';
 import { Operation } from '@models/Operation';
@@ -33,5 +33,17 @@ export default class RebalancerService implements IRebalancer {
             opId
         });
         return op;
+    }
+
+    public async getOpById(id: number): Promise<Operation> {
+        const op = await this.repo.getOpById(id);
+        if (op) {
+            return op;
+        }
+        throw new Error(`Op with id ${id} not found!`);
+    }
+
+    public async saveTxResult(result: SendTxReturn, op: Operation): Promise<void> {
+        await this.repo.saveTxResult(result, op);
     }
 }

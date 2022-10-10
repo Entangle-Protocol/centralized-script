@@ -1,7 +1,6 @@
 import {
     IConnector,
     ICore,
-    EventLog,
     getEventsOptions,
     GetEventsReturn,
     SendTxOptions,
@@ -13,7 +12,8 @@ import {
     Config,
     ContractInfo,
     SupportedChainIds,
-    TokenInfo
+    TokenInfo,
+    EventInfo
 } from '@config/interfaces';
 
 export default class ChainCore implements ICore {
@@ -48,22 +48,14 @@ export default class ChainCore implements ICore {
         }
     }
 
-    public getContractAddress(
-        contractName: ContractNames,
-        chainId?: SupportedChainIds,
-        i = 0
-    ): string {
+    public getContractAddress(contractName: ContractNames, chainId?: SupportedChainIds): string {
         if (!chainId) chainId = this.farm.chainId;
         const farm = this.getFarmObjectByChainId(chainId);
 
         if (!farm) throw new Error(`There is no farm with chainId ${chainId}`);
 
         if (this.farm.contracts[contractName]) {
-            if (Array.isArray(farm.contracts[contractName])) {
-                return (this.farm.contracts[contractName] as ContractInfo[])[i].address;
-            } else {
-                return (this.farm.contracts[contractName] as ContractInfo).address;
-            }
+            return (this.farm.contracts[contractName] as ContractInfo).address;
         } else {
             throw new Error(`There is no such contract in system!`);
         }
@@ -96,29 +88,15 @@ export default class ChainCore implements ICore {
         let contractName: ContractNames;
         for (contractName in contracts) {
             const contractArray = contracts[contractName];
-            if (Array.isArray(contractArray)) {
-                events[contractName] = [];
-                for (const contract of contractArray) {
-                    const event = await this.connector.getContractEvents({
-                        fromBlock,
-                        toBlock,
-                        chainId: this.farm.chainId,
-                        address: contract.address,
-                        eventInfo: contract.events
-                    });
-                    (events[contractName] as Array<EventLog[]>).push(event);
-                }
-            } else if (contractArray) {
-                const contract = contractArray;
-                const event = await this.connector.getContractEvents({
-                    fromBlock,
-                    toBlock,
-                    chainId: this.farm.chainId,
-                    address: contract.address,
-                    eventInfo: contract.events
-                });
-                events[contractName] = event;
-            }
+            const contract = contractArray;
+            const event = await this.connector.getContractEvents({
+                fromBlock,
+                toBlock,
+                chainId: this.farm.chainId,
+                address: contract?.address as string,
+                eventInfo: contract?.events as EventInfo[]
+            });
+            events[contractName] = event;
         }
 
         return events;
@@ -128,6 +106,14 @@ export default class ChainCore implements ICore {
     }
     public getBlockDelay(): number {
         return this.config.networks[this.farm.chainId].blockTime;
+    }
+
+    public getFarmId(pid: SupportedChainIds): number {
+        const farm = this.config.farms.find((farm) => farm.pid == pid);
+        if (farm) {
+            return farm.pid;
+        }
+        throw new Error(`No farm with pid ${pid} found!`);
     }
 
     private getFarmObjectByChainId(chainId: SupportedChainIds) {

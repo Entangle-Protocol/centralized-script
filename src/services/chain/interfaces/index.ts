@@ -43,19 +43,21 @@ export type SendTxOptions = {
     chainId: SupportedChainIds;
     address: string;
     data: Handler;
+    call?: boolean;
 };
 
 export type SendTxRawOptions = {
     chainId: SupportedChainIds;
     address: string;
     data: Handler;
+    call?: boolean;
 };
 
 type anyObject = {
     [key: string]: SupportedTypes;
 };
 
-type ParamArray = Param<SupportedTypes>[];
+export type ParamArray = Param<SupportedTypes>[];
 
 export type EventLog<T = anyObject> = {
     eventSignature: string;
@@ -75,14 +77,16 @@ export type EventLog<T = anyObject> = {
 
 export type SendTxReturn = {
     status: boolean;
+    value?: string;
     gas?: number;
     hash?: string;
     error?: string;
 };
 
 export type SendTxRawReturn = {
-    hash: string;
-    gas: number;
+    hash?: string;
+    gas?: number;
+    value?: string;
 };
 
 export type Handler = {
@@ -96,4 +100,4 @@ export type Param<T> = {
     value: T;
 };
 
-type SupportedTypes = number | string | bigint;
+export type SupportedTypes = number | string | bigint;

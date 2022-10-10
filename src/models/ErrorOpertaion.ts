@@ -23,8 +23,6 @@ class ErrorOperation extends Model<
     declare opData?: NonAttribute<Operation>;
 }
 
-ErrorOperation.belongsTo(Operation, { as: 'opData' });
-
 ErrorOperation.init(
     {
         error: DataTypes.STRING
@@ -34,5 +32,7 @@ ErrorOperation.init(
         sequelize: SequelizeAgent.getInstance()
     }
 );
+
+ErrorOperation.belongsTo(Operation, { as: 'opData', foreignKey: 'opId' });
 
 export { ErrorOperation, ErrorOperationOptions };

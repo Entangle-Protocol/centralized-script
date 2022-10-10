@@ -4,8 +4,7 @@ import {
     SendTxRawOptions,
     GetContractEventsOptions,
     SendTxRawReturn,
-    Handler,
-    Param
+    Handler
 } from '@chain/interfaces';
 import { Config, EventInfo, SupportedChainIds } from '@config/interfaces';
 import Web3 from 'web3';
@@ -31,7 +30,7 @@ export default class EthereumConnector implements IConnector {
     }
 
     public async sendTxRaw(o: SendTxRawOptions): Promise<SendTxRawReturn> {
-        const { chainId, address: to, data } = o;
+        const { chainId, address: to, data, call } = o;
         const web3 = this.getProvider(chainId);
         const encodedData = this.encodeData(data);
         const gas = await this.estimateGas(to, encodedData, chainId);
@@ -41,26 +40,35 @@ export default class EthereumConnector implements IConnector {
             gas,
             gasPrice: await web3.eth.getGasPrice()
         };
-        const signed = await web3.eth.accounts.signTransaction(txObject, this.wallet.pk);
+        if (!call) {
+            const signed = await web3.eth.accounts.signTransaction(txObject, this.wallet.pk);
+            return new Promise((resolve, reject) => {
+                if (!signed.rawTransaction) {
+                    reject(`Error while signing tx!`);
+                } else {
+                    web3.eth
+                        .sendSignedTransaction(signed.rawTransaction)
+                        .on('confirmation', (confirmation, receipt) => {
+                            if (confirmation >= 50) {
+                                const result: SendTxRawReturn = {
+                                    gas: receipt.gasUsed,
+                                    hash: receipt.transactionHash
+                                };
 
-        return new Promise((resolve, reject) => {
-            if (!signed.rawTransaction) {
-                reject(`Error while signing tx!`);
-            } else {
-                web3.eth
-                    .sendSignedTransaction(signed.rawTransaction)
-                    .on('confirmation', (confirmation, receipt) => {
-                        if (confirmation >= 50) {
-                            const result: SendTxRawReturn = {
-                                gas: receipt.gasUsed,
-                                hash: receipt.transactionHash
-                            };
-
-                            resolve(result);
-                        }
-                    });
-            }
-        });
+                                resolve(result);
+                            }
+                        });
+                }
+            });
+        } else {
+            return new Promise((resolve) => {
+                web3.eth.call(txObject).then((data) =>
+                    resolve({
+                        value: data
+                    })
+                );
+            });
+        }
     }
 
     public async getContractEvents(o: GetContractEventsOptions): Promise<EventLog[]> {
@@ -112,7 +120,7 @@ export default class EthereumConnector implements IConnector {
         return new Web3(url);
     }
 
-    private normalizeData(
+    protected normalizeData(
         _eventInfo: EventInfo[],
         e: Log[],
         sigsToTopics: { [key: string]: string }
@@ -123,10 +131,6 @@ export default class EthereumConnector implements IConnector {
             );
             const eventParameters = eventInfo?.parameters;
             if (eventParameters) {
-                // if (parameters.length != event.topics.length - 1) {
-                //     console.log('Error! Different topics/params amount');
-                //     return;
-                // }
                 const parameters: { [key: string]: string | number } = {};
                 for (const p of eventParameters) {
                     const i = eventParameters.indexOf(p);
@@ -165,7 +169,7 @@ export default class EthereumConnector implements IConnector {
         return normalizedEvents;
     }
 
-    private encodeData(d: Handler): string {
+    protected encodeData(d: Handler): string {
         const web3 = this.getProvider();
 
         const func = `${d.method}(${d.params
@@ -174,14 +178,20 @@ export default class EthereumConnector implements IConnector {
         const methodSignature = web3.eth.abi.encodeFunctionSignature(func);
         const params = d.params.reduce((pV, cV) => {
             if (!Array.isArray(cV.value)) {
-                const paramHex = this.utils.asciiToHex(cV.value.toString());
+                const paramHex =
+                    cV.chainParamType == 'bytes'
+                        ? this.utils.asciiToHex(cV.value.toString())
+                        : cV.value.toString().toLowerCase();
                 const encodedParam = web3.eth.abi
                     .encodeParameter(cV.chainParamType, paramHex)
                     .substring(2);
                 return pV + encodedParam;
             } else {
                 const value = cV.value.reduce((ipV, icV) => {
-                    const paramHex = this.utils.asciiToHex(icV.value.toString());
+                    const paramHex =
+                        icV.chainParamType == 'bytes'
+                            ? this.utils.asciiToHex(cV.value.toString())
+                            : icV.value.toString().toLowerCase();
                     const encodedParam = web3.eth.abi
                         .encodeParameter(icV.chainParamType, paramHex)
                         .substring(2);

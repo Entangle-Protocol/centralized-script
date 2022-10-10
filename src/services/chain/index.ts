@@ -1,4 +1,4 @@
-import { ContractNames } from '@config/interfaces';
+import { ContractNames, SupportedChainIds } from '@config/interfaces';
 import { Operation } from '@models/Operation';
 import { IRebalancer } from '@rebalancer/interfaces';
 import {
@@ -8,42 +8,53 @@ import {
     EventLog,
     RebalancingEvent,
     RebalancingEventType,
-    EventABuyHandler,
+    BridgeHandler,
     EventAEvent,
     DepositEvent,
     DepositEventType,
     DepositToChefHandler,
     MintDepositEvent,
-    MintDepositHandler,
-    EventASellFreezeHandler,
-    EventASellWithdrawHandler,
-    BurnWithdrawEvent
+    MintHandler,
+    WithdrawHandler,
+    BurnWithdrawEvent,
+    BurnHandler,
+    EventBCEvent,
+    EventBPossibilty,
+    BalanceOfHandler
 } from './interfaces';
 
 export default class ChainService implements IChainService {
     constructor(private readonly core: ICore, private readonly rebalancer: IRebalancer) {}
 
     public async startEventLoop(): Promise<void> {
+        console.log('Starting event loop...');
         let fromBlock = await this.core.getBlock();
         let toBlock = fromBlock;
 
         const blockDelay = this.core.getBlockDelay() || 60000;
-
+        console.log(`Start parameters: from ${fromBlock}, delay ${blockDelay}`);
         while (true) {
             try {
                 toBlock = await this.core.getBlock();
                 const timeStart = Date.now();
+                console.log(`Starts new phase!`);
                 if (fromBlock != toBlock) {
                     const events = await this.core.getEvents({
                         fromBlock,
                         toBlock
                     });
+                    console.log(
+                        `Found: Chef ${events.chef?.length}, Router ${events.router?.length}, Pool ${events.pool?.length}, Factory ${events.factory?.length},`
+                    );
                     await this.handlerRouter(events);
+                } else {
+                    console.log('No new blocks');
                 }
 
                 const timeEnd = Date.now();
+                console.log('Waiting for next phase...');
                 if (timeEnd - timeStart < blockDelay) {
-                    await this._await(timeEnd - timeStart); //lets wait until new blocks
+                    await this._await(blockDelay * 1000 - (timeEnd - timeStart)); //lets wait until new blocks
                 }
                 fromBlock = toBlock;
             } catch (error) {
@@ -129,11 +140,12 @@ export default class ChainService implements IChainService {
         switch (eventSignature) {
             case 'Deposit': {
                 const { parameters } = e as EventLog<MintDepositEvent>;
-                const { opId, amount } = parameters;
+                const { opId, amount: _amount } = parameters;
 
                 try {
                     let op: Operation;
                     if (!opId) {
+                        console.log(`Error! No opId provided`);
                         // op = await this.rebalancer.createOp();
                         return; //TODO!
                     } else {
@@ -145,8 +157,109 @@ export default class ChainService implements IChainService {
                         'factory',
                         op.sourceChainId
                     );
-                    const handler: MintDepositHandler = {
+
+                    const amount = BigInt(0); //TODO!
+                    const handler: MintHandler = {
                         method: 'mint',
+                        params: [
+                            {
+                                name: 'chainId',
+                                chainParamType: 'uint256',
+                                value: op.farmChainId
+                            },
+                            {
+                                name: 'synthChef',
+                                chainParamType: 'address',
+                                value: chefAddress
+                            },
+                            {
+                                name: 'pid',
+                                chainParamType: 'uint256',
+                                value: op.farmId
+                            },
+                            {
+                                name: 'amount',
+                                chainParamType: 'uin256',
+                                value: amount
+                            },
+                            {
+                                name: 'to',
+                                chainParamType: 'address',
+                                value: op.user || dexAddress
+                            }
+                        ]
+                    };
+
+                    const result = await this.core.sendTx({
+                        chainId: op.sourceChainId,
+                        address: factoryAddress,
+                        data: handler
+                    });
+
+                    await this.rebalancer.saveTxResult(result, op);
+                } catch (error) {}
+                break;
+            }
+            case 'Withdraw': {
+                const { parameters } = e as EventLog<BurnWithdrawEvent>;
+                const { opId, amount } = parameters;
+                try {
+                    let op: Operation;
+                    if (!opId) {
+                        // op = await this.rebalancer.createOp();
+                        return; //TODO!
+                    } else {
+                        op = await this.rebalancer.getOpById(opId);
+                    }
+                    const opToken = this.core.getOpToken();
+                    const chefAddress = this.core.getContractAddress('chef');
+                    const routerAddressX = this.core.getContractAddress('router', op.sourceChainId);
+                    const routerAddressY = this.core.getContractAddress('router', op.farmChainId);
+                    const factoryAddress = this.core.getContractAddress(
+                        'factory',
+                        op.sourceChainId
+                    );
+                    //TODO! Add amount calculation!
+                    const bridgeHandler: BridgeHandler = {
+                        method: 'bridgeToChain',
+                        params: [
+                            {
+                                name: 'token',
+                                chainParamType: 'address',
+                                value: opToken.address
+                            },
+                            {
+                                name: 'to',
+                                chainParamType: 'address',
+                                value: this.core.getContractAddress('pool', op.sourceChainId)
+                            },
+                            { name: 'amount', chainParamType: 'uint256', value: amount },
+                            {
+                                name: 'toChainId',
+                                chainParamType: 'uint256',
+                                value: op.sourceChainId
+                            },
+                            {
+                                name: 'anycallProxy',
+                                chainParamType: 'address',
+                                value: this.core.getContractAddress('pool', op.sourceChainId)
+                            },
+                            {
+                                name: 'data',
+                                chainParamType: 'bytes',
+                                value: [
+                                    {
+                                        name: 'opId',
+                                        chainParamType: 'uint256',
+                                        value: op.id
+                                    }
+                                ]
+                            }
+                        ]
+                    };
+
+                    const burnHandler: BurnHandler = {
+                        method: 'burn',
                         params: [
                             {
                                 name: 'chainId',
@@ -169,36 +282,27 @@ export default class ChainService implements IChainService {
                                 value: BigInt(0) //TODO!
                             },
                             {
-                                name: 'to',
+                                name: 'from',
                                 chainParamType: 'address',
-                                value: op.user || dexAddress
+                                value: routerAddressX
                             }
                         ]
                     };
-
-                    const result = await this.core.sendTx({
-                        chainId: op.sourceChainId,
-                        address: factoryAddress,
-                        data: handler
+                    //send tx to Router to bridge USDC, to burn synths
+                    const burnResult = await this.core.sendTx({
+                        address: factoryAddress, //synthfactory on source chain
+                        chainId: op.sourceChainId, //source
+                        data: burnHandler
                     });
 
-                    await this.rebalancer.saveTxResult(result, op);
-                } catch (error) {}
-                break;
-            }
-            case 'Withdraw': {
-                const { parameters } = e as EventLog<BurnWithdrawEvent>;
-                const { opId } = parameters;
-                try {
-                    let op: Operation;
-                    if (!opId) {
-                        // op = await this.rebalancer.createOp();
-                        return; //TODO!
-                    } else {
-                        op = await this.rebalancer.getOpById(opId);
-                    }
+                    const bridgeResult = await this.core.sendTx({
+                        address: routerAddressY, //router on farm chain
+                        chainId: op.farmChainId, //farm
+                        data: bridgeHandler
+                    });
 
-                    //send tx to Router to bridge USDC, to burn synths
+                    await this.rebalancer.saveTxResult(burnResult, op);
+                    await this.rebalancer.saveTxResult(bridgeResult, op);
                 } catch (error) {}
             }
         }
@@ -241,7 +345,7 @@ export default class ChainService implements IChainService {
                             const routerAddress = this.core.getContractAddress('router');
 
                             const handler: DepositToChefHandler = {
-                                method: 'deposit',
+                                method: 'depositFromPool',
                                 params: [
                                     {
                                         name: 'pid',
@@ -329,7 +433,7 @@ export default class ChainService implements IChainService {
                             const routerAddress = this.core.getContractAddress('router');
                             const opToken = this.core.getOpToken();
                             //creating data object for tx
-                            const handler: EventABuyHandler = {
+                            const handler: BridgeHandler = {
                                 method: 'bridgeToChain',
                                 params: [
                                     {
@@ -386,23 +490,7 @@ export default class ChainService implements IChainService {
 
                             const opToken = this.core.getOpToken(op.farmChainId);
 
-                            // const freezeHandler: EventASellFreezeHandler = {
-                            //     method: 'freeze',
-                            //     params: [
-                            //         {
-                            //             name: 'opId',
-                            //             chainParamType: 'uint256',
-                            //             value: op.id
-                            //         },
-                            //         {
-                            //             name: 'amount',
-                            //             chainParamType: 'uint256',
-                            //             value: amount
-                            //         }
-                            //     ]
-                            // };
-
-                            const withdrawHandler: EventASellWithdrawHandler = {
+                            const withdrawHandler: WithdrawHandler = {
                                 method: 'withdraw',
                                 params: [
                                     {
@@ -434,15 +522,6 @@ export default class ChainService implements IChainService {
                                 ]
                             };
 
-                            // const freezeResult = await this.core.sendTx({
-                            //     chainId: op.sourceChainId,
-                            //     address: factoryAddress,
-                            //     data: freezeHandler
-                            // });
-
-                            // await this.rebalancer.saveTxResult(freezeResult, op);
-
-                            // if (freezeResult.status) {
                             const withdrawResult = await this.core.sendTx({
                                 chainId: op.farmChainId,
                                 address: routerAddress,
@@ -450,8 +529,156 @@ export default class ChainService implements IChainService {
                             });
 
                             await this.rebalancer.saveTxResult(withdrawResult, op);
-                            // }
                             break;
+                        }
+                    }
+                } catch (error) {
+                    console.log(error);
+                }
+            }
+            case 'EventBC': {
+                const { parameters } = e as EventLog<EventBCEvent>;
+                const { type: _type, pid, amount, user } = parameters;
+
+                // getting Operation info
+                const type = this.getRebalancingEventType(_type);
+                const sourceChainId = this.core.getChainId();
+                const farmChainId = this.core.getFarmChainId(pid);
+                const farmId = this.core.getFarmId(pid);
+                try {
+                    //check if it is event B or C
+                    const isEventB = await this.getEventBPossibility(farmChainId, amount);
+                    const event = isEventB ? RebalancingEvent.B : RebalancingEvent.C;
+                    const op = await this.rebalancer.createOp(
+                        type,
+                        event,
+                        sourceChainId,
+                        farmChainId,
+                        farmId,
+                        user
+                    );
+                    if (isEventB) {
+                        switch (type) {
+                            case RebalancingEventType.Buy: {
+                                //calc amount to loan
+                                //look if it is enough money on idex on chain Y
+                                //freezeHandler? if we need to loan from synthchef
+                                //loanHandler
+                                //deposit from pool handler
+                            }
+                            case RebalancingEventType.Sell: {
+                            }
+                        }
+                    } else {
+                        switch (type) {
+                            case RebalancingEventType.Buy: {
+                                //send tx to bridge
+                                const opToken = this.core.getOpToken();
+                                const routerAddress = this.core.getContractAddress('router');
+                                const handler: BridgeHandler = {
+                                    method: 'bridgeToChain',
+                                    params: [
+                                        {
+                                            name: 'token',
+                                            chainParamType: 'address',
+                                            value: opToken.address
+                                        },
+                                        {
+                                            name: 'to',
+                                            chainParamType: 'address',
+                                            value: this.core.getContractAddress(
+                                                'pool',
+                                                op.farmChainId
+                                            )
+                                        },
+                                        {
+                                            name: 'amount',
+                                            chainParamType: 'uint256',
+                                            value: amount
+                                        },
+                                        {
+                                            name: 'toChainId',
+                                            chainParamType: 'uint256',
+                                            value: op.farmChainId
+                                        },
+                                        {
+                                            name: 'anycallProxy',
+                                            chainParamType: 'address',
+                                            value: this.core.getContractAddress(
+                                                'pool',
+                                                op.farmChainId
+                                            )
+                                        },
+                                        {
+                                            name: 'data',
+                                            chainParamType: 'bytes',
+                                            value: [
+                                                {
+                                                    name: 'opId',
+                                                    chainParamType: 'uint256',
+                                                    value: op.id
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                };
+
+                                const result = await this.core.sendTx({
+                                    chainId: op.farmChainId,
+                                    address: routerAddress,
+                                    data: handler
+                                });
+
+                                await this.rebalancer.saveTxResult(result, op);
+                                break;
+                            }
+                            case RebalancingEventType.Sell: {
+                                const opToken = this.core.getOpToken(op.farmChainId);
+                                const routerAddress = this.core.getContractAddress(
+                                    'router',
+                                    op.farmChainId
+                                );
+                                const handler: WithdrawHandler = {
+                                    method: 'withdraw',
+                                    params: [
+                                        {
+                                            name: 'pid',
+                                            chainParamType: 'uint256',
+                                            value: op.farmId
+                                        },
+                                        {
+                                            name: 'tokenTo',
+                                            chainParamType: 'uint256',
+                                            value: opToken.address
+                                        },
+                                        {
+                                            name: 'amount',
+                                            chainParamType: 'uint256',
+                                            value: amount
+                                        },
+                                        {
+                                            name: 'data',
+                                            chainParamType: 'bytes',
+                                            value: [
+                                                {
+                                                    name: 'opId',
+                                                    chainParamType: 'uint256',
+                                                    value: op.id
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                };
+
+                                const result = await this.core.sendTx({
+                                    chainId: op.farmChainId,
+                                    address: routerAddress,
+                                    data: handler
+                                });
+
+                                await this.rebalancer.saveTxResult(result, op);
+                                break;
+                            }
                         }
                     }
                 } catch (error) {
@@ -490,6 +717,64 @@ export default class ChainService implements IChainService {
             default: {
                 throw new Error(`Wrong event type`);
             }
+        }
+    }
+
+    private async getEventBPossibility(
+        farmChainId: SupportedChainIds,
+        amount: bigint
+    ): Promise<EventBPossibilty> {
+        //TODO!
+        const sourceOpToken = this.core.getOpToken();
+        const farmOpToken = this.core.getOpToken(farmChainId);
+        const dexAddress = this.core.getContractAddress('dex', farmChainId);
+        const farmId = this.core.getFarmId(farmChainId);
+        const balanceOfHandler: BalanceOfHandler = {
+            method: 'balanceOf',
+            params: [
+                {
+                    name: 'account',
+                    chainParamType: 'address',
+                    value: dexAddress
+                }
+            ]
+        };
+
+        try {
+            const balance = await this.core.sendTx({
+                address: farmOpToken.address,
+                data: balanceOfHandler,
+                chainId: farmChainId,
+                call: true
+            });
+
+            if (!balance.value) {
+                throw new Error('Error while calculating eventB possibility!');
+            }
+
+            const pureAmount = amount / BigInt(Math.pow(10, sourceOpToken.decimals));
+
+            const pureBalance = BigInt(balance.value) / BigInt(Math.pow(10, farmOpToken.decimals));
+
+            if (pureBalance >= pureAmount) {
+                const result: EventBPossibilty = {
+                    possible: true,
+                    lender: dexAddress,
+                    farmId
+                };
+
+                return result;
+            } else {
+                // TODO! Look to synthchef flow!
+                return {
+                    possible: false
+                };
+            }
+        } catch (error) {
+            console.log(error);
+            return {
+                possible: false
+            };
         }
     }
 }

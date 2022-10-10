@@ -1,4 +1,4 @@
-export type SupportedChainIds = 250 | 1 | 56 | 43114;
+export type SupportedChainIds = 250 | 1 | 56 | 43114 | 2 | 3 | 4;
 export type ChainType = 'evm' | 'elrond';
 export type ContractNames = 'chef' | 'factory' | 'dex' | 'router' | 'loan' | 'pool';
 

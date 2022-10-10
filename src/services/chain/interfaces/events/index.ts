@@ -1,5 +1,5 @@
 import { SupportedChainIds } from '@config/interfaces';
-import { Handler, Param } from '..';
+import { Handler, Param, ParamArray } from '..';
 
 export type EventAEvent = {
     type: string; //Buy Sell
@@ -7,38 +7,68 @@ export type EventAEvent = {
     pid: SupportedChainIds; //farmPid
 };
 
-export interface EventABuyHandler extends Handler {
+export type EventBCEvent = {
+    type: string; //Buy Sell
+    amount: bigint; //amoun op token
+    pid: SupportedChainIds; //farmPid
+    user: string; //User address
+};
+
+export type EventBPossibilty = {
+    possible: boolean;
+    lender?: string;
+    farmId?: number;
+};
+
+export interface LoanHandler<T extends ParamArray = LoanData> extends Handler {
+    params: [
+        Param<number>, //amount
+        Param<string>, //token
+        Param<string>, //lender
+        Param<T> //data
+    ];
+}
+
+type LoanData = [
+    Param<number> //opId
+];
+
+export interface FreezeHandler<T extends ParamArray = FreezeData> extends Handler {
+    params: [
+        Param<number>, //amount
+        Param<T> //data
+    ];
+}
+
+type FreezeData = [
+    Param<number> //opId
+];
+
+export interface BridgeHandler<T extends ParamArray = BridgeData> extends Handler {
     params: [
         Param<string>, //token
         Param<string>, //to
         Param<bigint>, //amount
         Param<SupportedChainIds>, //toChainId
         Param<string>, //anycallProxy
-        Param<EventABuyData> //data
+        Param<T> //data
     ];
 }
 
-type EventABuyData = [
+type BridgeData = [
     Param<number> //opId
 ];
 
-export interface EventASellFreezeHandler extends Handler {
-    params: [
-        Param<number>, //opId
-        Param<bigint> //amount
-    ];
-}
-
-export interface EventASellWithdrawHandler extends Handler {
+export interface WithdrawHandler<T extends ParamArray = WithdrawData> extends Handler {
     params: [
         Param<number>, //pid
         Param<string>, //tokenFrom
         Param<bigint>, //amount
-        Param<EventASellWithdrawData>
+        Param<T>
     ];
 }
 
-type EventASellWithdrawData = [
+type WithdrawData = [
     Param<number> //opid
 ];
 
@@ -76,7 +106,7 @@ export type MintDepositEvent = {
     amount: bigint;
 };
 
-export interface MintDepositHandler extends Handler {
+export interface MintHandler extends Handler {
     params: [
         Param<SupportedChainIds>, //farm chainId
         Param<string>, //farm synthChef address
@@ -88,10 +118,17 @@ export interface MintDepositHandler extends Handler {
 
 export type BurnWithdrawEvent = {
     opId: number;
+    amount: bigint;
 };
 
-export interface BurnWithdrawHandler extends Handler {
-    params: [];
+export interface BurnHandler extends Handler {
+    params: [
+        Param<SupportedChainIds>, //farm chainId
+        Param<string>, //farm synthChef address
+        Param<number>, // farm pid
+        Param<bigint>, //amount
+        Param<string> //to
+    ];
 }
 
 export enum RebalancingEventType {
@@ -109,4 +146,10 @@ export enum DepositEventType {
     DepositToChef,
     DepositToDEX,
     DepositToWallet
+}
+
+export interface BalanceOfHandler extends Handler {
+    params: [
+        Param<string> //address
+    ];
 }

@@ -15,7 +15,9 @@ export class SequelizeAgent {
             return SequelizeAgent.instance;
         }
 
-        SequelizeAgent.instance = new Sequelize(process.env.DB_URL as string); //TODO redo
+        SequelizeAgent.instance = new Sequelize(process.env.DB_URL as string, {
+            logging: false
+        });
 
         return SequelizeAgent.instance;
     }

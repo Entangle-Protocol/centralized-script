@@ -14,9 +14,11 @@ export interface IRebalancer {
     ): Promise<Operation>;
     createErrorOp(error: string, opId: number): Promise<ErrorOperation>;
     getOpById(id: number): Promise<Operation>;
-    saveTxResult(result: SendTxReturn, op: Operation): Promise<Operation>;
+    saveTxResult(result: SendTxReturn, op: Operation): Promise<void>;
 }
 export interface IRepository {
     createOp(o: OperationOptions): Promise<Operation>;
     createErrorOp(o: ErrorOperationOptions): Promise<ErrorOperation>;
+    getOpById(id: number): Promise<Operation | null>;
+    saveTxResult(result: SendTxReturn, op: Operation): Promise<void>;
 }
