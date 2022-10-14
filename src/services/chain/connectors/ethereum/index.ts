@@ -4,7 +4,8 @@ import {
     SendTxRawOptions,
     GetContractEventsOptions,
     SendTxRawReturn,
-    Handler
+    Handler,
+    anyObject
 } from '@chain/interfaces';
 import { Config, EventInfo, SupportedChainIds } from '@config/interfaces';
 import Web3 from 'web3';
@@ -38,8 +39,10 @@ export default class EthereumConnector implements IConnector {
             chainId: chainId,
             to,
             gas,
-            gasPrice: await web3.eth.getGasPrice()
+            gasPrice: await web3.eth.getGasPrice(),
+            data: encodedData
         };
+        console.log(txObject);
         if (!call) {
             const signed = await web3.eth.accounts.signTransaction(txObject, this.wallet.pk);
             return new Promise((resolve, reject) => {
@@ -49,7 +52,7 @@ export default class EthereumConnector implements IConnector {
                     web3.eth
                         .sendSignedTransaction(signed.rawTransaction)
                         .on('confirmation', (confirmation, receipt) => {
-                            if (confirmation >= 50) {
+                            if (confirmation >= 1) {
                                 const result: SendTxRawReturn = {
                                     gas: receipt.gasUsed,
                                     hash: receipt.transactionHash
@@ -71,29 +74,38 @@ export default class EthereumConnector implements IConnector {
         }
     }
 
+    protected createSignature(e: EventInfo): string {
+        return `${e.signature}(${e.parameters
+            .reduce((pv, cv) => pv + Object.values(cv)[0] + ',', '')
+            .slice(0, -1)})`;
+    }
+
     public async getContractEvents(o: GetContractEventsOptions): Promise<EventLog[]> {
         const { fromBlock, toBlock, address, eventInfo, chainId } = o;
         const provider = this.getProvider(chainId);
         const signaturesToTopics: { [key: string]: string } = {};
         const topics = eventInfo.map((el) => {
-            const hash = provider.utils.sha3(el.signature);
+            const hash = provider.utils.keccak256(this.createSignature(el));
             if (hash) {
                 signaturesToTopics[hash] = el.signature;
             }
             return hash;
         });
         try {
-            const events = await provider.eth.getPastLogs({
-                fromBlock,
-                toBlock,
-                address,
-                topics
-            });
+            let events: Log[] = [];
+            for (let i = 0; i < topics.length; i++) {
+                const eventsChunk = await provider.eth.getPastLogs({
+                    fromBlock,
+                    toBlock,
+                    address,
+                    topics: [topics[i]]
+                });
+                events = events.concat(eventsChunk);
+            }
             return this.normalizeData(eventInfo, events, signaturesToTopics);
         } catch (error) {
             console.log(error);
-            const events = await this.getContractEvents(o);
-            return events;
+            return [];
         }
     }
 
@@ -131,28 +143,23 @@ export default class EthereumConnector implements IConnector {
             );
             const eventParameters = eventInfo?.parameters;
             if (eventParameters) {
-                const parameters: { [key: string]: string | number } = {};
-                for (const p of eventParameters) {
-                    const i = eventParameters.indexOf(p);
-                    const topic = event.topics[i];
-                    const type = Object.values(p)[0];
-                    const name = Object.keys(p)[0];
-                    switch (type) {
-                        case 'address': {
-                            const normalized = '0x' + topic.slice(-40);
-                            parameters[name] = normalized;
-                            break;
-                        }
-                        case 'uint256': {
-                            const normalized = this.utils.hexToNumber(topic);
-                            parameters[name] = normalized;
-                            break;
-                        }
+                const parametersType = eventParameters.map((el) => Object.values(el)[0]);
+                const parameters: anyObject = {};
+                const parametersValues = this.getProvider().eth.abi.decodeParameters(
+                    parametersType,
+                    event.data
+                );
+                parametersType.forEach((type, i) => {
+                    if (type == 'bytes') {
+                        parametersValues[i] = this.utils.hexToAscii(parametersValues[i]);
                     }
-                }
+                });
+                eventParameters.forEach((param, i) => {
+                    parameters[Object.keys(param)[0]] = parametersValues[i];
+                });
                 const updated: EventLog = {
                     eventSignature: sigsToTopics[event.topics[0]],
-                    parameters,
+                    parameters: parameters,
                     chainParametersTypes: eventParameters,
                     ...event
                 };
@@ -176,32 +183,37 @@ export default class EthereumConnector implements IConnector {
             .reduce((pValue, cValue) => pValue + ',' + cValue.chainParamType, '')
             .slice(1)})`;
         const methodSignature = web3.eth.abi.encodeFunctionSignature(func);
-        const params = d.params.reduce((pV, cV) => {
-            if (!Array.isArray(cV.value)) {
+        let paramToString = '';
+        d.params.forEach((p) => {
+            if (!Array.isArray(p.value)) {
                 const paramHex =
-                    cV.chainParamType == 'bytes'
-                        ? this.utils.asciiToHex(cV.value.toString())
-                        : cV.value.toString().toLowerCase();
+                    p.chainParamType == 'bytes32'
+                        ? this.utils.asciiToHex(p.value.toString())
+                        : p.value.toString().toLowerCase();
                 const encodedParam = web3.eth.abi
-                    .encodeParameter(cV.chainParamType, paramHex)
+                    .encodeParameter(p.chainParamType, paramHex)
                     .substring(2);
-                return pV + encodedParam;
+                paramToString += encodedParam;
             } else {
-                const value = cV.value.reduce((ipV, icV) => {
-                    const paramHex =
-                        icV.chainParamType == 'bytes'
-                            ? this.utils.asciiToHex(cV.value.toString())
-                            : icV.value.toString().toLowerCase();
-                    const encodedParam = web3.eth.abi
-                        .encodeParameter(icV.chainParamType, paramHex)
-                        .substring(2);
-                    return ipV + encodedParam;
-                }, '');
-                return value;
+                const innerParamToObj: anyObject = {};
+                const innerParamValue: anyObject = {};
+                p.value.forEach((ip) => {
+                    innerParamToObj[ip.name] = ip.chainParamType;
+                    innerParamValue[ip.name] =
+                        ip.chainParamType == 'bytes32'
+                            ? this.utils.asciiToHex(ip.value.toString())
+                            : ip.value.toString().toLowerCase();
+                });
+                const encodedParams = web3.eth.abi.encodeParameter(
+                    { data: innerParamToObj },
+                    innerParamValue
+                );
+                paramToString += web3.eth.abi
+                    .encodeParameter(p.chainParamType, encodedParams)
+                    .substring(2);
             }
-        }, '');
-
-        return methodSignature + params;
+        });
+        return methodSignature + paramToString;
     }
 
     private async estimateGas(

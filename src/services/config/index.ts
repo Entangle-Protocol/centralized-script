@@ -3,18 +3,10 @@ import { Config } from './interfaces';
 /**
  * This is fake contracts that uses only for tests
  */
-const chain1 = {
-    router: '0x9DDc21C09d63546BE6897c84485aECCc916C7CA6',
-    chef: '0xc0E767eD5338beB960EE5069ba97fDCcd1d1Af7f',
-    pool: '0x3baEF661F30a9c6E3a454B82086F60dA3399853F',
-    factory: '0x04F7C1850c545788bA729fE6b7ad40Dc0D88af90'
-};
-const chain2 = {
-    router: '0x3479D7445271CF0763a7aAe2a47385dc0A029F78',
-    chef: '0xfC3C1113E2faB05c60396FFA6721aAA528a1FAC5',
-    pool: '0x543031d83d9EDA23A96eeEfcc7d5Bd3d0E4f88d6',
-    factory: '0x21c957D49F76f0A3B420bb854199af98688e856b'
-};
+import chainC1 from './bsc_addresses.json';
+import chainC2 from './avax_addresses.json';
+const chain1 = chainC1;
+const chain2 = chainC2;
 
 export const ETHConfig: Config = {
     /**
@@ -39,11 +31,66 @@ export const ETHConfig: Config = {
             contracts: {
                 chef: {
                     address: chain1.chef,
-                    events: []
+                    events: [
+                        {
+                            signature: 'Deposit',
+                            parameters: [
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    opId: 'uint256'
+                                }
+                            ]
+                        },
+                        {
+                            signature: 'Withdraw',
+                            parameters: [
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    opId: 'uint256'
+                                }
+                            ]
+                        }
+                    ]
                 },
                 router: {
                     address: chain1.router,
-                    events: []
+                    events: [
+                        {
+                            signature: 'EventA',
+                            parameters: [
+                                {
+                                    eventType: 'bytes'
+                                },
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    pid: 'uint256'
+                                }
+                            ]
+                        }
+                        // {
+                        //     signature: 'EventBC',
+                        //     parameters: [
+                        //         {
+                        //             eventType: 'bytes'
+                        //         },
+                        //         {
+                        //             amount: 'uint256'
+                        //         },
+                        //         {
+                        //             pid: 'uint256'
+                        //         },
+                        //         {
+                        //             user: 'address'
+                        //         }
+                        //     ]
+                        // }
+                    ]
                 },
                 factory: {
                     address: chain1.factory,
@@ -59,7 +106,19 @@ export const ETHConfig: Config = {
                 },
                 pool: {
                     address: chain1.pool,
-                    events: []
+                    events: [
+                        {
+                            signature: 'Deposit',
+                            parameters: [
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    opId: 'uint256'
+                                }
+                            ]
+                        }
+                    ]
                 }
             },
             opToken: {
@@ -73,11 +132,66 @@ export const ETHConfig: Config = {
             contracts: {
                 chef: {
                     address: chain2.chef,
-                    events: []
+                    events: [
+                        {
+                            signature: 'Deposit',
+                            parameters: [
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    opId: 'uint256'
+                                }
+                            ]
+                        },
+                        {
+                            signature: 'Withdraw',
+                            parameters: [
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    opId: 'uint256'
+                                }
+                            ]
+                        }
+                    ]
                 },
                 router: {
                     address: chain2.router,
-                    events: []
+                    events: [
+                        {
+                            signature: 'EventA',
+                            parameters: [
+                                {
+                                    eventType: 'bytes'
+                                },
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    pid: 'uint256'
+                                }
+                            ]
+                        },
+                        {
+                            signature: 'EventBC',
+                            parameters: [
+                                {
+                                    eventType: 'bytes'
+                                },
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    pid: 'uint256'
+                                },
+                                {
+                                    user: 'address'
+                                }
+                            ]
+                        }
+                    ]
                 },
                 factory: {
                     address: chain2.factory,
@@ -93,7 +207,19 @@ export const ETHConfig: Config = {
                 },
                 pool: {
                     address: chain2.pool,
-                    events: []
+                    events: [
+                        {
+                            signature: 'Deposit',
+                            parameters: [
+                                {
+                                    amount: 'uint256'
+                                },
+                                {
+                                    opId: 'uint256'
+                                }
+                            ]
+                        }
+                    ]
                 }
             },
             opToken: {
@@ -101,75 +227,19 @@ export const ETHConfig: Config = {
                 decimals: 6
             }
         }
-        // {
-        //     pid: 7,
-        //     chainId: 56,
-        //     contracts: {
-        //         chef: {
-        //             address: '',
-        //             events: []
-        //         },
-        //         router: {
-        //             address: '',
-        //             events: []
-        //         },
-        //         factories: [],
-        //         dexes: [],
-        //         loan: {
-        //             address: '',
-        //             events: []
-        //         },
-        //         pool: {
-        //             address: '',
-        //             events: []
-        //         }
-        //     },
-        //     opToken: {
-        //         address: '',
-        //         decimals: 18
-        //     }
-        // },
-        // {
-        //     pid: 26,
-        //     chainId: 1,
-        //     contracts: {
-        //         chef: {
-        //             address: '',
-        //             events: []
-        //         },
-        //         router: {
-        //             address: '',
-        //             events: []
-        //         },
-        //         factories: [],
-        //         dexes: [],
-        //         loan: {
-        //             address: '',
-        //             events: []
-        //         },
-        //         pool: {
-        //             address: '',
-        //             events: []
-        //         }
-        //     },
-        //     opToken: {
-        //         address: '',
-        //         decimals: 18
-        //     }
-        // }
     ],
     networks: {
         56: {
-            url: '',
-            blockTime: 0
+            url: 'https://data-seed-prebsc-1-s3.binance.org:8545',
+            blockTime: 15
         },
         250: {
-            url: '',
-            blockTime: 0
+            url: 'https://fantom-testnet.public.blastapi.io',
+            blockTime: 15
         },
         43114: {
-            url: '',
-            blockTime: 0
+            url: 'https://api.avax-test.network/ext/bc/C/rpc',
+            blockTime: 15
         },
         1: {
             url: 'http://127.0.0.1:8541',

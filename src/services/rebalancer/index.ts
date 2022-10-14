@@ -13,6 +13,7 @@ export default class RebalancerService implements IRebalancer {
         sourceChainId: SupportedChainIds,
         farmChainId: SupportedChainIds,
         farmId: number,
+        amount: bigint,
         user?: string
     ): Promise<Operation> {
         const op = await this.repo.createOp({
@@ -22,6 +23,7 @@ export default class RebalancerService implements IRebalancer {
             sourceChainId,
             farmChainId,
             farmId,
+            amount,
             status: `Starting event A ${type} rebalancing`
         });
         return op;
@@ -43,7 +45,8 @@ export default class RebalancerService implements IRebalancer {
         throw new Error(`Op with id ${id} not found!`);
     }
 
-    public async saveTxResult(result: SendTxReturn, op: Operation): Promise<void> {
-        await this.repo.saveTxResult(result, op);
+    public async saveTxResult(result: SendTxReturn, status: string, op: Operation): Promise<void> {
+        console.log(`Saving tx result for op ${op.id}`);
+        await this.repo.saveTxResult(result, status, op);
     }
 }

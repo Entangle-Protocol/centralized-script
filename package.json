@@ -1,7 +1,7 @@
 {
     "name": "backend-script",
     "version": "1.0.0",
-    "main": "src/index.ts",
+    "main": "dist/index.js",
     "license": "MIT",
     "devDependencies": {
         "@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -21,6 +21,7 @@
         "mocha": "^10.0.0",
         "nyc": "^15.1.0",
         "prettier": "^2.7.1",
+        "sequelize-cli": "^6.5.1",
         "ts-mockito": "^2.6.1",
         "ts-node": "^10.9.1",
         "tsconfig-paths": "^4.1.0",

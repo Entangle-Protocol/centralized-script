@@ -24,6 +24,10 @@ class TestPrivateWrap extends EthereumConnector {
     public _encodeData(d: Handler): string {
         return this.encodeData(d);
     }
+
+    public _createSignature(e: EventInfo): string {
+        return this.createSignature(e);
+    }
 }
 
 _chai.should();
@@ -79,16 +83,31 @@ class EthereumConnectorUnitTest {
             params: [
                 {
                     name: 'testAddress',
-                    chainParamType: 'bytes',
+                    chainParamType: 'bytes32',
                     value: 'test-string'
                 }
             ]
         };
         const encoded = this.connector._encodeData(mockHandler);
         expect(encoded).to.be.equal(
-            '0x2f570a230000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000b746573742d737472696e67000000000000000000000000000000000000000000'
+            '0x99372321746573742d737472696e67000000000000000000000000000000000000000000'
         );
     }
 
-    @test 'Should normalize data properly'() {}
+    @test 'Should create right event signature'() {
+        const e: EventInfo = {
+            signature: 'Test',
+            parameters: [
+                {
+                    first_param: 'address'
+                },
+                {
+                    second_param: 'uint256'
+                }
+            ]
+        };
+
+        const sig = this.connector._createSignature(e);
+        expect(sig).to.be.equal('Test(address,uint256)')
+    }
 }

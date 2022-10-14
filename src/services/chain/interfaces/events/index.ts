@@ -2,13 +2,13 @@ import { SupportedChainIds } from '@config/interfaces';
 import { Handler, Param, ParamArray } from '..';
 
 export type EventAEvent = {
-    type: string; //Buy Sell
+    eventType: string; //Buy Sell
     amount: bigint; //amoun op token
     pid: SupportedChainIds; //farmPid
 };
 
 export type EventBCEvent = {
-    type: string; //Buy Sell
+    eventType: string; //Buy Sell
     amount: bigint; //amoun op token
     pid: SupportedChainIds; //farmPid
     user: string; //User address
@@ -132,8 +132,8 @@ export interface BurnHandler extends Handler {
 }
 
 export enum RebalancingEventType {
-    Buy = 'Buy',
-    Sell = 'Sell'
+    Buy = 'BUY',
+    Sell = 'SELL'
 }
 
 export enum RebalancingEvent {

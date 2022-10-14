@@ -27,6 +27,10 @@ export function log(log: Logger, ...data: any[]) {
     );
 }
 
+export function line(log: Logger) {
+    log(chalk.blueBright('-'.repeat(process.stdout.columns || 100)));
+}
+
 // eslint-disable-next-line
 export function chainLog(_log: Logger, chainId: number, ...data: any[]) {
     switch (chainId) {

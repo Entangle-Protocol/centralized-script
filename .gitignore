@@ -3,4 +3,5 @@ dist
 *.env
 *.log
 .nyc_output
+.code-workspace
 test/coverage

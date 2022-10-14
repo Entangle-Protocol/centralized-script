@@ -1,0 +1,8 @@
+const dotenv = require('dotenv');
+const path = require('path');
+dotenv.config();
+
+module.exports = {
+    url: process.env.DB_URL,
+    "models-path": path.resolve('dist/models')
+}

@@ -37,8 +37,8 @@ export default class ChainService implements IChainService {
             try {
                 toBlock = await this.core.getBlock();
                 const timeStart = Date.now();
-                console.log(`Starts new phase!`);
-                if (fromBlock != toBlock) {
+                if (fromBlock < toBlock) {
+                    console.log(`Starts new phase! From ${fromBlock}, to ${toBlock}`);
                     const events = await this.core.getEvents({
                         fromBlock,
                         toBlock
@@ -47,8 +47,9 @@ export default class ChainService implements IChainService {
                         `Found: Chef ${events.chef?.length}, Router ${events.router?.length}, Pool ${events.pool?.length}, Factory ${events.factory?.length},`
                     );
                     await this.handlerRouter(events);
+                    fromBlock = toBlock + 1;
                 } else {
-                    console.log('No new blocks');
+                    console.log('Not enough time');
                 }
 
                 const timeEnd = Date.now();
@@ -56,11 +57,9 @@ export default class ChainService implements IChainService {
                 if (timeEnd - timeStart < blockDelay) {
                     await this._await(blockDelay * 1000 - (timeEnd - timeStart)); //lets wait until new blocks
                 }
-                fromBlock = toBlock;
             } catch (error) {
-                //TODO? error handler (continue or ?);
                 console.log(error);
-                continue;
+                await this._await(blockDelay * 1000);
             }
         }
     }
@@ -74,32 +73,6 @@ export default class ChainService implements IChainService {
                     if (events) {
                         for (const event of events) {
                             await this.chefHandler(event);
-                        }
-                    }
-                    break;
-                }
-                case 'dex': {
-                    const events: EventLog[] = e[contract] as EventLog[];
-                    if (events) {
-                        for (const event of events) {
-                            await this.dexHandler(event);
-                        }
-                    }
-                    break;
-                }
-                case 'factory': {
-                    const events: EventLog[] = e[contract] as EventLog[];
-                    if (events) {
-                        for (const event of events) {
-                            await this.factoryHandler(event);
-                        }
-                    }
-                }
-                case 'loan': {
-                    const events: EventLog[] = e[contract] as EventLog[];
-                    if (events) {
-                        for (const event of events) {
-                            await this.loanHandler(event);
                         }
                     }
                     break;
@@ -126,20 +99,13 @@ export default class ChainService implements IChainService {
         }
     }
 
-    private async _await(delay: number) {
-        return new Promise((resolve) =>
-            setTimeout(() => {
-                resolve(true);
-            }, delay)
-        );
-    }
-
     private async chefHandler(e: EventLog) {
         const { eventSignature } = e;
 
         switch (eventSignature) {
             case 'Deposit': {
                 const { parameters } = e as EventLog<MintDepositEvent>;
+                console.log(parameters);
                 const { opId, amount: _amount } = parameters;
 
                 try {
@@ -179,7 +145,7 @@ export default class ChainService implements IChainService {
                             },
                             {
                                 name: 'amount',
-                                chainParamType: 'uin256',
+                                chainParamType: 'uint256',
                                 value: amount
                             },
                             {
@@ -190,13 +156,19 @@ export default class ChainService implements IChainService {
                         ]
                     };
 
+                    console.log(op.user || dexAddress, factoryAddress);
+
                     const result = await this.core.sendTx({
                         chainId: op.sourceChainId,
                         address: factoryAddress,
                         data: handler
                     });
 
-                    await this.rebalancer.saveTxResult(result, op);
+                    await this.rebalancer.saveTxResult(
+                        result,
+                        `Assets successfuly deposited to chef. Minting new synths`,
+                        op
+                    );
                 } catch (error) {}
                 break;
             }
@@ -301,31 +273,18 @@ export default class ChainService implements IChainService {
                         data: bridgeHandler
                     });
 
-                    await this.rebalancer.saveTxResult(burnResult, op);
-                    await this.rebalancer.saveTxResult(bridgeResult, op);
+                    await this.rebalancer.saveTxResult(
+                        burnResult,
+                        `Asking factory to burn synths`,
+                        op
+                    );
+                    await this.rebalancer.saveTxResult(
+                        bridgeResult,
+                        `Ask Router to bridge assets`,
+                        op
+                    );
                 } catch (error) {}
             }
-        }
-    }
-
-    private async dexHandler(e: EventLog) {
-        const { eventSignature } = e;
-
-        switch (eventSignature) {
-        }
-    }
-
-    private async factoryHandler(e: EventLog) {
-        const { eventSignature } = e;
-
-        switch (eventSignature) {
-        }
-    }
-
-    private async loanHandler(e: EventLog) {
-        const { eventSignature } = e;
-
-        switch (eventSignature) {
         }
     }
 
@@ -342,8 +301,9 @@ export default class ChainService implements IChainService {
                     const opToken = this.core.getOpToken();
                     switch (type) {
                         case DepositEventType.DepositToChef: {
+                            //TODO OP nextChain checking
                             const routerAddress = this.core.getContractAddress('router');
-
+                            op.nextChain = this.core.getChainId();
                             const handler: DepositToChefHandler = {
                                 method: 'depositFromPool',
                                 params: [
@@ -354,7 +314,7 @@ export default class ChainService implements IChainService {
                                     },
                                     {
                                         name: 'tokenFrom',
-                                        chainParamType: 'uint256',
+                                        chainParamType: 'address',
                                         value: opToken.address
                                     },
                                     {
@@ -364,7 +324,7 @@ export default class ChainService implements IChainService {
                                     },
                                     {
                                         name: 'data',
-                                        chainParamType: 'bytes',
+                                        chainParamType: 'bytes32',
                                         value: [
                                             {
                                                 name: 'opId',
@@ -382,14 +342,20 @@ export default class ChainService implements IChainService {
                                 data: handler
                             });
 
-                            await this.rebalancer.saveTxResult(result, op);
+                            await this.rebalancer.saveTxResult(
+                                result,
+                                `Depositing assets to chef`,
+                                op
+                            );
                             break;
                         }
                         case DepositEventType.DepositToDEX: {
                             // return DepositEventType.DepositToDEX;
+                            break;
                         }
                         case DepositEventType.DepositToWallet: {
                             // return DepositEventType.DepositToWallet;
+                            break;
                         }
                         default: {
                             throw new Error(`Wrong event type`);
@@ -408,7 +374,7 @@ export default class ChainService implements IChainService {
             case 'EventA': {
                 // geting parameters from event
                 const { parameters } = e as EventLog<EventAEvent>;
-                const { type: _type, pid, amount } = parameters;
+                const { eventType: _type, pid, amount } = parameters;
 
                 // getting Operation info
                 const type = this.getRebalancingEventType(_type);
@@ -424,8 +390,10 @@ export default class ChainService implements IChainService {
                         event,
                         sourceChainId,
                         farmChainId,
-                        farmId
+                        farmId,
+                        amount
                     );
+                    op.nextChain = sourceChainId;
 
                     switch (type) {
                         case RebalancingEventType.Buy: {
@@ -459,7 +427,7 @@ export default class ChainService implements IChainService {
                                     },
                                     {
                                         name: 'data',
-                                        chainParamType: 'bytes',
+                                        chainParamType: 'bytes32',
                                         value: [
                                             {
                                                 name: 'opId',
@@ -477,7 +445,11 @@ export default class ChainService implements IChainService {
                                 data: handler
                             });
 
-                            await this.rebalancer.saveTxResult(result, op);
+                            await this.rebalancer.saveTxResult(
+                                result,
+                                `Router send request for bridging`,
+                                op
+                            );
 
                             break;
                         }
@@ -528,18 +500,22 @@ export default class ChainService implements IChainService {
                                 data: withdrawHandler
                             });
 
-                            await this.rebalancer.saveTxResult(withdrawResult, op);
+                            await this.rebalancer.saveTxResult(
+                                withdrawResult,
+                                `Router send request for withdrawing`,
+                                op
+                            );
                             break;
                         }
                     }
                 } catch (error) {
                     console.log(error);
                 }
+                break;
             }
             case 'EventBC': {
                 const { parameters } = e as EventLog<EventBCEvent>;
-                const { type: _type, pid, amount, user } = parameters;
-
+                const { eventType: _type, pid, amount, user } = parameters;
                 // getting Operation info
                 const type = this.getRebalancingEventType(_type);
                 const sourceChainId = this.core.getChainId();
@@ -555,6 +531,7 @@ export default class ChainService implements IChainService {
                         sourceChainId,
                         farmChainId,
                         farmId,
+                        amount,
                         user
                     );
                     if (isEventB) {
@@ -575,6 +552,7 @@ export default class ChainService implements IChainService {
                                 //send tx to bridge
                                 const opToken = this.core.getOpToken();
                                 const routerAddress = this.core.getContractAddress('router');
+                                op.nextChain = sourceChainId;
                                 const handler: BridgeHandler = {
                                     method: 'bridgeToChain',
                                     params: [
@@ -629,7 +607,11 @@ export default class ChainService implements IChainService {
                                     data: handler
                                 });
 
-                                await this.rebalancer.saveTxResult(result, op);
+                                await this.rebalancer.saveTxResult(
+                                    result,
+                                    `Router send request for bridging`,
+                                    op
+                                );
                                 break;
                             }
                             case RebalancingEventType.Sell: {
@@ -638,6 +620,7 @@ export default class ChainService implements IChainService {
                                     'router',
                                     op.farmChainId
                                 );
+                                op.nextChain = farmChainId;
                                 const handler: WithdrawHandler = {
                                     method: 'withdraw',
                                     params: [
@@ -676,7 +659,11 @@ export default class ChainService implements IChainService {
                                     data: handler
                                 });
 
-                                await this.rebalancer.saveTxResult(result, op);
+                                await this.rebalancer.saveTxResult(
+                                    result,
+                                    `Router send request for withdraw`,
+                                    op
+                                );
                                 break;
                             }
                         }
@@ -684,12 +671,13 @@ export default class ChainService implements IChainService {
                 } catch (error) {
                     console.log(error);
                 }
+                break;
             }
         }
     }
 
     private getRebalancingEventType(type: string): RebalancingEventType {
-        switch (type) {
+        switch (type.trim()) {
             case RebalancingEventType.Buy: {
                 return RebalancingEventType.Buy;
             }
@@ -705,13 +693,13 @@ export default class ChainService implements IChainService {
     //TODO do not hardcode
     private getDepositEventType(rebalancingType: string, eventType: string): DepositEventType {
         switch (true) {
-            case ['A, C'].includes(rebalancingType) && eventType == 'Buy': {
+            case ['A', 'C'].includes(rebalancingType) && eventType == 'BUY': {
                 return DepositEventType.DepositToChef;
             }
-            case ['A'].includes(rebalancingType) && eventType == 'Sell': {
+            case ['A'].includes(rebalancingType) && eventType == 'SELL': {
                 return DepositEventType.DepositToDEX;
             }
-            case ['C'].includes(rebalancingType) && eventType == 'Sell': {
+            case ['C'].includes(rebalancingType) && eventType == 'SELL': {
                 return DepositEventType.DepositToWallet;
             }
             default: {
@@ -776,5 +764,13 @@ export default class ChainService implements IChainService {
                 possible: false
             };
         }
+    }
+
+    private async _await(delay: number) {
+        return new Promise((resolve) =>
+            setTimeout(() => {
+                resolve(true);
+            }, delay)
+        );
     }
 }

@@ -2,8 +2,10 @@ import { IRepository } from '@rebalancer/interfaces';
 import { Operation, OperationOptions } from '@models/Operation';
 import { ErrorOperation, ErrorOperationOptions } from '@models/ErrorOpertaion';
 import { SendTxReturn } from '@chain/interfaces';
+import { Sequelize } from 'sequelize';
 
 export default class Repository implements IRepository {
+    constructor(private readonly sequelize: Sequelize) {}
     public async createOp(o: OperationOptions): Promise<Operation> {
         try {
             return await Operation.create(o);
@@ -31,17 +33,25 @@ export default class Repository implements IRepository {
         }
     }
 
-    public async saveTxResult(result: SendTxReturn, op: Operation): Promise<void> {
+    public async saveTxResult(result: SendTxReturn, status: string, op: Operation): Promise<void> {
         try {
             if (result.status) {
-                op.status = `Router send request for bridging`;
+                op.status = status;
                 op.gasSpent += result.gas as number;
-                op.hashes.push(result.hash as string);
                 op.currentStep++;
+                await op.update({
+                    hashes: this.sequelize.fn(
+                        'array_append',
+                        this.sequelize.col('hashes'),
+                        result.hash
+                    )
+                });
                 await op.save();
             } else {
                 await this.createErrorOp({
-                    error: result.error ? result.error : 'Something went wrong',
+                    error: result.error
+                        ? (result.error?.message as string)?.substring(0, 255) // only 255 char length!
+                        : 'Something went wrong',
                     opId: op.id
                 });
             }

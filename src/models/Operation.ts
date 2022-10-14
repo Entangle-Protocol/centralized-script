@@ -15,8 +15,10 @@ type OperationOptions = {
     sourceChainId: SupportedChainIds;
     farmChainId: SupportedChainIds;
     farmId: number;
+    amount: bigint;
     user?: string;
     status?: string;
+    nextChain?: SupportedChainIds;
 };
 
 type OperationAttributes = InferAttributes<Operation>;
@@ -26,10 +28,12 @@ class Operation extends Model<InferAttributes<Operation>, InferCreationAttribute
     declare event: string; //A,B,C
     declare type: string; //Buy,Sell
     declare user: CreationOptional<string>;
+    declare amount: bigint;
     declare sourceChainId: SupportedChainIds;
     declare farmChainId: SupportedChainIds;
     declare farmId: number;
     declare status: string | null;
+    declare nextChain: SupportedChainIds | null;
     declare currentStep: CreationOptional<number>;
     declare gasSpent: CreationOptional<number>;
     declare duration: CreationOptional<number>;
@@ -46,11 +50,12 @@ Operation.init(
             autoIncrement: true
         },
         farmId: DataTypes.INTEGER,
-        type: DataTypes.CHAR(4),
+        type: DataTypes.STRING,
         event: DataTypes.CHAR(1),
         user: DataTypes.CHAR(42),
         sourceChainId: DataTypes.INTEGER,
         farmChainId: DataTypes.INTEGER,
+        nextChain: DataTypes.INTEGER,
         status: DataTypes.STRING,
         currentStep: {
             type: DataTypes.INTEGER,
@@ -58,6 +63,10 @@ Operation.init(
         },
         gasSpent: {
             type: DataTypes.INTEGER,
+            defaultValue: 0
+        },
+        amount: {
+            type: DataTypes.BIGINT,
             defaultValue: 0
         },
         duration: {

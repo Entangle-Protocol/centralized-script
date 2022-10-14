@@ -53,7 +53,7 @@ export type SendTxRawOptions = {
     call?: boolean;
 };
 
-type anyObject = {
+export type anyObject = {
     [key: string]: SupportedTypes;
 };
 
@@ -80,7 +80,8 @@ export type SendTxReturn = {
     value?: string;
     gas?: number;
     hash?: string;
-    error?: string;
+    // eslint-disable-next-line
+    error?: any;
 };
 
 export type SendTxRawReturn = {
