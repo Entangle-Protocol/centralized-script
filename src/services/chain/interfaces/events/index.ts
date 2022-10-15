@@ -112,7 +112,8 @@ export interface MintHandler extends Handler {
         Param<string>, //farm synthChef address
         Param<number>, // farm pid
         Param<bigint>, //amount
-        Param<string> //to
+        Param<string>, //to,
+        Param<number> //opId
     ];
 }
 
@@ -127,7 +128,8 @@ export interface BurnHandler extends Handler {
         Param<string>, //farm synthChef address
         Param<number>, // farm pid
         Param<bigint>, //amount
-        Param<string> //to
+        Param<string>, //to
+        Param<number>
     ];
 }
 

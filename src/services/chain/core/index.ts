@@ -54,8 +54,8 @@ export default class ChainCore implements ICore {
 
         if (!farm) throw new Error(`There is no farm with chainId ${chainId}`);
 
-        if (this.farm.contracts[contractName]) {
-            return (this.farm.contracts[contractName] as ContractInfo).address;
+        if (farm.contracts[contractName]) {
+            return (farm.contracts[contractName] as ContractInfo).address;
         } else {
             throw new Error(`There is no such contract in system!`);
         }

@@ -32,10 +32,10 @@ export function line(log: Logger) {
 }
 
 // eslint-disable-next-line
-export function chainLog(_log: Logger, chainId: number, ...data: any[]) {
+export function chainLog(_log: Logger, chainId: number, index: number, ...data: any[]) {
     switch (chainId) {
         case 1: {
-            log(_log, `[${chalk.yellow('TestBSC')}]`, ...data);
+            log(_log, `[${chalk.yellow('TestBSC')}][${index}]`, ...data);
             break;
         }
         case 2: {
@@ -43,7 +43,7 @@ export function chainLog(_log: Logger, chainId: number, ...data: any[]) {
             break;
         }
         case 3: {
-            log(_log, `[${chalk.red('TestAvax')}]`, ...data);
+            log(_log, `[${chalk.red('TestAvax')}][${index}]`, ...data);
             break;
         }
         case 43114: {

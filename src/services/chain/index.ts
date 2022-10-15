@@ -124,6 +124,8 @@ export default class ChainService implements IChainService {
                         op.sourceChainId
                     );
 
+                    console.log(factoryAddress, op);
+
                     const amount = BigInt(0); //TODO!
                     const handler: MintHandler = {
                         method: 'mint',
@@ -152,6 +154,11 @@ export default class ChainService implements IChainService {
                                 name: 'to',
                                 chainParamType: 'address',
                                 value: op.user || dexAddress
+                            },
+                            {
+                                name: 'opId',
+                                chainParamType: 'uint256',
+                                value: op.id
                             }
                         ]
                     };
@@ -218,7 +225,7 @@ export default class ChainService implements IChainService {
                             },
                             {
                                 name: 'data',
-                                chainParamType: 'bytes',
+                                chainParamType: 'bytes32',
                                 value: [
                                     {
                                         name: 'opId',
@@ -250,13 +257,18 @@ export default class ChainService implements IChainService {
                             },
                             {
                                 name: 'amount',
-                                chainParamType: 'uin256',
+                                chainParamType: 'uint256',
                                 value: BigInt(0) //TODO!
                             },
                             {
                                 name: 'from',
                                 chainParamType: 'address',
                                 value: routerAddressX
+                            },
+                            {
+                                name: 'opId',
+                                chainParamType: 'uint256',
+                                value: op.id
                             }
                         ]
                     };
@@ -350,7 +362,6 @@ export default class ChainService implements IChainService {
                             break;
                         }
                         case DepositEventType.DepositToDEX: {
-                            // return DepositEventType.DepositToDEX;
                             break;
                         }
                         case DepositEventType.DepositToWallet: {
@@ -456,7 +467,7 @@ export default class ChainService implements IChainService {
                         case RebalancingEventType.Sell: {
                             // const factoryAddress = this.core.getContractAddress('factory');
                             const routerAddress = this.core.getContractAddress(
-                                'chef',
+                                'router',
                                 op.farmChainId
                             );
 
@@ -472,7 +483,7 @@ export default class ChainService implements IChainService {
                                     },
                                     {
                                         name: 'tokenTo',
-                                        chainParamType: 'uint256',
+                                        chainParamType: 'address',
                                         value: opToken.address
                                     },
                                     {
@@ -482,7 +493,7 @@ export default class ChainService implements IChainService {
                                     },
                                     {
                                         name: 'data',
-                                        chainParamType: 'bytes',
+                                        chainParamType: 'bytes32',
                                         value: [
                                             {
                                                 name: 'opId',
@@ -589,7 +600,7 @@ export default class ChainService implements IChainService {
                                         },
                                         {
                                             name: 'data',
-                                            chainParamType: 'bytes',
+                                            chainParamType: 'bytes32',
                                             value: [
                                                 {
                                                     name: 'opId',
@@ -641,7 +652,7 @@ export default class ChainService implements IChainService {
                                         },
                                         {
                                             name: 'data',
-                                            chainParamType: 'bytes',
+                                            chainParamType: 'bytes32',
                                             value: [
                                                 {
                                                     name: 'opId',

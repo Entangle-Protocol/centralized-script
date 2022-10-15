@@ -35,14 +35,18 @@ export default class EthereumConnector implements IConnector {
         const web3 = this.getProvider(chainId);
         const encodedData = this.encodeData(data);
         const gas = await this.estimateGas(to, encodedData, chainId);
+        const nonce = await web3.eth.getTransactionCount(
+            web3.eth.accounts.privateKeyToAccount(this.wallet.pk).address
+        );
         const txObject: TransactionConfig = {
+            nonce,
             chainId: chainId,
             to,
             gas,
             gasPrice: await web3.eth.getGasPrice(),
             data: encodedData
         };
-        console.log(txObject);
+        console.log(txObject, o.data.method);
         if (!call) {
             const signed = await web3.eth.accounts.signTransaction(txObject, this.wallet.pk);
             return new Promise((resolve, reject) => {

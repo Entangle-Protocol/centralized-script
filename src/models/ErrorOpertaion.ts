@@ -33,6 +33,6 @@ ErrorOperation.init(
     }
 );
 
-ErrorOperation.belongsTo(Operation, { as: 'opData', foreignKey: 'opId' });
+ErrorOperation.belongsTo(Operation, { as: 'opData', foreignKey: 'opId', onDelete: 'CASCADE' });
 
 export { ErrorOperation, ErrorOperationOptions };

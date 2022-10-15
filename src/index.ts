@@ -1,4 +1,4 @@
-import { Worker, isMainThread, workerData } from 'worker_threads'; //!use worker threads for parallel event listening
+import { Worker, isMainThread, workerData } from 'worker_threads';
 import { ETHConfig } from '@config/index';
 import { EthereumConnector } from '@chain/connectors';
 import Core from '@chain/core';
@@ -25,14 +25,18 @@ async function main() {
         await SequelizeAgent.connect();
         await db.sync({ alter: true });
         console.log('Main thread started! Starting working threads...');
-        watchedFarms.forEach((el) => {
+        watchedFarms.forEach((el, index) => {
             const worker = new Worker(__filename, {
                 workerData: {
-                    pid: el
+                    pid: el,
+                    index
                 }
             });
 
             worker.on('message', () => {}); //TODO handle workers response
+            worker.on('error', (err) => {
+                console.log(err);
+            });
         });
         console.log('Every thread started!');
     } else {
@@ -42,7 +46,7 @@ async function main() {
         const service = new ChainServce(core, rebalancer);
 
         const chainId = core.getChainId();
-        console.log = (...data) => chainLog(prevLogger, chainId, ...data);
+        console.log = (...data) => chainLog(prevLogger, chainId, workerData.index, ...data);
         console.log(`Working thread for farm ${pid} have been started!`);
         service.startEventLoop();
     }
