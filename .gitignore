@@ -5,3 +5,4 @@ dist
 .nyc_output
 .code-workspace
 test/coverage
+package-lock.json

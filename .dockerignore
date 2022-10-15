@@ -1,0 +1,15 @@
+.nyc_output
+dist
+.vscode
+migrations
+node_modules
+test
+.env
+.eslint*
+.gitignore
+.mocharc.json
+.nycrc.json
+.prettierrc
+package-lock.json
+README.md
+*.log
